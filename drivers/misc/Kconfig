@@ -423,6 +423,13 @@ config SRAM
 config SRAM_EXEC
 	bool
 
+config UBOOT_BOOTCOUNT
+	tristate "U-Boot Bootcount driver"
+	depends on OF
+	help
+	  The U-Boot Bootcount driver allows to access the
+	  bootcounter through sysFS file.
+
 config PCI_ENDPOINT_TEST
 	depends on PCI
 	select CRC32
