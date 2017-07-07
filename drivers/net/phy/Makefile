@@ -21,6 +21,8 @@ obj-$(CONFIG_PHYLIB)		+= libphy.o
 obj-$(CONFIG_PHYLIB)		+= mdio_devres.o
 obj-$(CONFIG_PHY_PACKAGE)	+= phy_package.o
 
+obj-$(CONFIG_SWCONFIG)		+= swconfig.o
+
 obj-$(CONFIG_NETWORK_PHY_TIMESTAMPING) += mii_timestamper.o
 
 obj-$(CONFIG_SFP)		+= sfp.o
