@@ -1639,6 +1639,19 @@ static int fe_probe(struct platform_device *pdev)
 	netif_napi_add_weight(netdev, &priv->rx_napi, fe_poll, napi_weight);
 	fe_set_ethtool_ops(netdev);
 
+	/* Init DMA mask */
+	netdev->dev.dma_mask = &netdev->dev.coherent_dma_mask;
+	err = dma_set_mask(&netdev->dev, DMA_BIT_MASK(32));
+	if (err) {
+		dev_err(&pdev->dev, "error setting DMA mask\n");
+		goto err_free_dev;
+	}
+	err = dma_set_coherent_mask(&netdev->dev, DMA_BIT_MASK(32));
+	if (err) {
+		dev_err(&pdev->dev, "error setting coherent DMA mask\n");
+		goto err_free_dev;
+	}
+
 	err = register_netdev(netdev);
 	if (err) {
 		dev_err(&pdev->dev, "error bringing up device\n");
