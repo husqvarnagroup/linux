@@ -16,6 +16,7 @@
 
 #include <asm/mach-ralink/ralink_regs.h>
 
+#include "esw_rt3050.h"
 #include "mtk_eth_soc.h"
 #include "mdio_rt2880.h"
 
@@ -143,6 +144,7 @@ static struct fe_soc_data rt5350_data = {
 	.set_mac = rt5350_set_mac,
 	.fwd_config = rt5350_fwd_config,
 	.tx_dma = rt5350_tx_dma,
+	.switch_init = rt5350_switch_init,
 	.pdma_glo_cfg = FE_PDMA_SIZE_8DWORDS,
 	.checksum_bit = RX_DMA_L4VALID,
 	.rx_int = RT5350_RX_DONE_INT,
