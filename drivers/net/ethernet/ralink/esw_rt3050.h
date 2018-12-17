@@ -15,6 +15,10 @@
 #ifndef _RALINK_ESW_RT3052_H__
 #define _RALINK_ESW_RT3052_H__
 
+#include "mtk_eth_soc.h"
+
+int rt5350_switch_init(struct fe_priv *priv);
+
 #ifdef CONFIG_NET_RALINK_ESW_RT3052
 
 int __init mtk_switch_init(void);
