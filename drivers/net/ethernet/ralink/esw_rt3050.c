@@ -18,6 +18,7 @@
 #include <linux/platform_device.h>
 #include <asm/mach-ralink/ralink_regs.h>
 #include <linux/of_irq.h>
+#include <linux/of_device.h>
 
 #include <linux/switch.h>
 
@@ -711,9 +712,10 @@ static void esw_hw_init(struct rt305x_esw *esw)
 	esw_w32(esw, ~RT305X_ESW_PORT_ST_CHG, RT305X_ESW_REG_IMR);
 }
 
-static irqreturn_t esw_interrupt(int irq, void *_esw)
+static irqreturn_t esw_interrupt(int irq, void *_priv)
 {
-	struct rt305x_esw *esw = (struct rt305x_esw *)_esw;
+	struct fe_priv *priv = (struct fe_priv *)_priv;
+	struct rt305x_esw *esw = (struct rt305x_esw *)priv->soc->swpriv;
 	u32 status;
 
 	status = esw_r32(esw, RT305X_ESW_REG_ISR);
@@ -723,6 +725,11 @@ static irqreturn_t esw_interrupt(int irq, void *_esw)
 		link >>= RT305X_ESW_POA_LINK_SHIFT;
 		link &= RT305X_ESW_POA_LINK_MASK;
 		dev_info(esw->dev, "link changed 0x%02X\n", link);
+
+		if (link)
+			netif_carrier_on(priv->netdev);
+		else
+			netif_carrier_off(priv->netdev);
 	}
 	esw_w32(esw, status, RT305X_ESW_REG_ISR);
 
@@ -1404,10 +1411,9 @@ static int esw_probe(struct platform_device *pdev)
 
 	spin_lock_init(&esw->reg_rw_lock);
 
-	esw_hw_init(esw);
-
 	reg_init = of_get_property(np, "ralink,rgmii", NULL);
 	if (reg_init && be32_to_cpu(*reg_init) == 1) {
+		esw_hw_init(esw);
 		/* 
 		 * External switch connected to RGMII interface. 
 		 * Unregister the switch device after initialization. 
@@ -1416,14 +1422,6 @@ static int esw_probe(struct platform_device *pdev)
 		unregister_switch(&esw->swdev);
 		platform_set_drvdata(pdev, NULL);
 		return -ENODEV;
-	}
-
-	ret = devm_request_irq(&pdev->dev, esw->irq, esw_interrupt, 0, "esw",
-			       esw);
-
-	if (!ret) {
-		esw_w32(esw, RT305X_ESW_PORT_ST_CHG, RT305X_ESW_REG_ISR);
-		esw_w32(esw, ~RT305X_ESW_PORT_ST_CHG, RT305X_ESW_REG_IMR);
 	}
 
 	return ret;
@@ -1456,6 +1454,42 @@ static struct platform_driver esw_driver = {
 		.of_match_table = ralink_esw_match,
 	},
 };
+
+int rt5350_switch_init(struct fe_priv *priv)
+{
+	struct device_node *np = priv->switch_np;
+	struct platform_device *pdev = of_find_device_by_node(np);
+	struct rt305x_esw *esw;
+
+	if (!pdev)
+		return -ENODEV;
+
+	if (!of_device_is_compatible(np, ralink_esw_match->compatible))
+		return -EINVAL;
+
+	esw = platform_get_drvdata(pdev);
+	if (!esw)
+		return -EINVAL;
+
+	priv->soc->swpriv = esw;
+
+	esw_hw_init(esw);
+
+	if (esw->irq) {
+		int ret;
+
+		ret = request_irq(esw->irq, esw_interrupt, 0, "esw", priv);
+		if (ret) {
+			dev_err(esw->dev, "Error requesting IRQ\n");
+			return -ENODEV;
+		}
+
+		esw_w32(esw, RT305X_ESW_PORT_ST_CHG, RT305X_ESW_REG_ISR);
+		esw_w32(esw, ~RT305X_ESW_PORT_ST_CHG, RT305X_ESW_REG_IMR);
+	}
+
+	return 0;
+}
 
 module_platform_driver(esw_driver);
 
