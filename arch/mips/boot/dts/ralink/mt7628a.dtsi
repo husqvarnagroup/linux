@@ -28,7 +28,7 @@
 		compatible = "mti,cpu-interrupt-controller";
 	};
 
-	palmbus@10000000 {
+	palmbus: palmbus@10000000 {
 		compatible = "palmbus";
 		reg = <0x10000000 0x200000>;
 		ranges = <0x0 0x10000000 0x1FFFFF>;
