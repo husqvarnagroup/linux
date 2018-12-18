@@ -212,3 +212,10 @@
 	status = "okay";
 	mediatek,mtd-eeprom = <&factory 0x0000>;
 };
+
+&palmbus {
+	bootcount@0x6c {
+		compatible = "uboot,bootcount";
+		reg = <0x0000006c 0x4>;
+	};
+};
