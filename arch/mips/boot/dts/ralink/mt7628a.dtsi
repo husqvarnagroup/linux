@@ -310,6 +310,8 @@
 		reset-names = "fe";
 
 		status = "disabled";
+
+		mediatek,switch = <&esw>;
 	};
 
 	esw: esw@10110000 {
