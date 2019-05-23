@@ -116,6 +116,7 @@
 
 	aliases {
 		serial0 = &uart0;
+		ethernet0 = &ethernet;
 	};
 };
 
@@ -169,6 +170,14 @@
 		reg = <1>;
 		spi-max-frequency = <40000000>;
 	};
+};
+
+&ethernet {
+	status = "okay";
+};
+
+&esw {
+	status = "okay";
 };
 
 &uart1 {
