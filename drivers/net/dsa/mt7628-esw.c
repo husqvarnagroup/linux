@@ -461,8 +461,9 @@ static int mt7628_esw_phy_write(struct dsa_switch *ds, int port, int regnum,
 	return mii_mgr_write(priv, port, regnum, val);
 }
 
-static enum dsa_tag_protocol mt7628_esw_get_tag_protocol(struct dsa_switch *ds,
-							 int port)
+static enum dsa_tag_protocol
+mt7628_esw_get_tag_protocol(struct dsa_switch *ds, int port,
+			    enum dsa_tag_protocol mp)
 {
 	if (port != MT7628_ESW_CPU_PORT) {
 		dev_warn(ds->dev, "port not matched with tagging CPU port\n");
