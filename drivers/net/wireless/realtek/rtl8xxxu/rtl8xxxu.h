@@ -1301,6 +1301,12 @@ struct rtl8xxxu_priv {
 	u8 cck_tx_power_index_B[RTL8XXXU_MAX_CHANNEL_GROUPS];
 	u8 ht40_1s_tx_power_index_A[RTL8XXXU_MAX_CHANNEL_GROUPS];
 	u8 ht40_1s_tx_power_index_B[RTL8XXXU_MAX_CHANNEL_GROUPS];
+
+	u8 cck_tx_power_index_A_backup[RTL8XXXU_MAX_CHANNEL_GROUPS];
+	u8 cck_tx_power_index_B_backup[RTL8XXXU_MAX_CHANNEL_GROUPS];
+	u8 ht40_1s_tx_power_index_A_backup[RTL8XXXU_MAX_CHANNEL_GROUPS];
+	u8 ht40_1s_tx_power_index_B_backup[RTL8XXXU_MAX_CHANNEL_GROUPS];
+
 	/*
 	 * The following entries are half-bytes split as:
 	 * bits 0-3: path A, bits 4-7: path B, all values 4 bits signed
@@ -1428,6 +1434,7 @@ struct rtl8xxxu_fileops {
 	void (*enable_rf) (struct rtl8xxxu_priv *priv);
 	void (*disable_rf) (struct rtl8xxxu_priv *priv);
 	void (*usb_quirks) (struct rtl8xxxu_priv *priv);
+	u8 (*dbm_to_txpwridx)(struct rtl8xxxu_priv *priv, u16 mode, int dbm);
 	void (*set_tx_power) (struct rtl8xxxu_priv *priv, int channel,
 			      bool ht40);
 	void (*update_rate_mask) (struct rtl8xxxu_priv *priv,
@@ -1510,6 +1517,8 @@ void rtl8xxxu_disabled_to_emu(struct rtl8xxxu_priv *priv);
 int rtl8xxxu_init_llt_table(struct rtl8xxxu_priv *priv);
 void rtl8xxxu_gen1_phy_iq_calibrate(struct rtl8xxxu_priv *priv);
 void rtl8xxxu_gen1_init_phy_bb(struct rtl8xxxu_priv *priv);
+u8 rtl8xxxu_gen1_dbm_to_txpwridx(struct rtl8xxxu_priv *priv,
+				 u16 mode, int dbm);
 void rtl8xxxu_gen1_set_tx_power(struct rtl8xxxu_priv *priv,
 				int channel, bool ht40);
 void rtl8xxxu_gen1_config_channel(struct ieee80211_hw *hw);

@@ -1382,6 +1382,38 @@ void rtl8xxxu_gen2_config_channel(struct ieee80211_hw *hw)
 	}
 }
 
+#define MAX_TXPWR_IDX_NMODE_92S		63
+
+u8
+rtl8xxxu_gen1_dbm_to_txpwridx(struct rtl8xxxu_priv *priv, u16 mode, int dbm)
+{
+	u8 txpwridx;
+	long offset;
+
+	switch (mode) {
+	case WIRELESS_MODE_B:
+		offset = -7;
+		break;
+	case WIRELESS_MODE_G:
+	case WIRELESS_MODE_N_24G:
+		offset = -8;
+		break;
+	default:
+		offset = -8;
+		break;
+	}
+
+	if ((dbm - offset) > 0)
+		txpwridx = (u8)((dbm - offset) * 2);
+	else
+		txpwridx = 0;
+
+	if (txpwridx > MAX_TXPWR_IDX_NMODE_92S)
+		txpwridx = MAX_TXPWR_IDX_NMODE_92S;
+
+	return txpwridx;
+}
+
 void
 rtl8xxxu_gen1_set_tx_power(struct rtl8xxxu_priv *priv, int channel, bool ht40)
 {
@@ -4512,6 +4544,68 @@ rtl8xxxu_wireless_mode(struct ieee80211_hw *hw, struct ieee80211_sta *sta)
 	return network_type;
 }
 
+static int rtl8xxxu_get_txpower(struct ieee80211_hw *hw,
+				struct ieee80211_vif *vif, int *dbm)
+{
+	struct rtl8xxxu_priv *priv = hw->priv;
+
+	if (!priv->fops->get_tx_power)
+		return -EOPNOTSUPP;
+
+	*dbm = priv->fops->get_tx_power(priv);
+
+	return 0;
+}
+
+static void rtl8xxxu_update_tx_power(struct rtl8xxxu_priv *priv, int dbm)
+{
+	bool ht40 = false;
+	struct ieee80211_hw *hw = priv->hw;
+	int channel = hw->conf.chandef.chan->hw_value;
+	u8 cck_txpwridx, ofdm_txpwridx;
+	int group;
+
+	if (!priv->fops->dbm_to_txpwridx)
+		return;
+
+	switch (hw->conf.chandef.width) {
+	case NL80211_CHAN_WIDTH_20_NOHT:
+	case NL80211_CHAN_WIDTH_20:
+		ht40 = false;
+		break;
+	case NL80211_CHAN_WIDTH_40:
+		ht40 = true;
+		break;
+	default:
+		return;
+	}
+
+	/* change the power level to power index */
+	cck_txpwridx = priv->fops->dbm_to_txpwridx(priv, WIRELESS_MODE_B,
+						   dbm);
+	ofdm_txpwridx = priv->fops->dbm_to_txpwridx(priv, WIRELESS_MODE_N_24G,
+						    dbm);
+
+	if (ofdm_txpwridx - priv->ofdm_tx_power_index_diff[1].a > 0)
+		ofdm_txpwridx -= priv->ofdm_tx_power_index_diff[1].a;
+	else
+		ofdm_txpwridx = 0;
+
+	group = rtl8xxxu_gen1_channel_to_group(channel);
+
+	if (cck_txpwridx <= priv->cck_tx_power_index_A_backup[group]) {
+		priv->cck_tx_power_index_A[group] = cck_txpwridx;
+		priv->cck_tx_power_index_B[group] = cck_txpwridx;
+	}
+
+	if (ofdm_txpwridx <= priv->ht40_1s_tx_power_index_A_backup[group]) {
+		priv->ht40_1s_tx_power_index_A[group] = ofdm_txpwridx;
+		priv->ht40_1s_tx_power_index_B[group] = ofdm_txpwridx;
+	}
+
+	priv->fops->set_tx_power(priv, channel, ht40);
+}
+
 static void
 rtl8xxxu_bss_info_changed(struct ieee80211_hw *hw, struct ieee80211_vif *vif,
 			  struct ieee80211_bss_conf *bss_conf, u32 changed)
@@ -4607,6 +4701,11 @@ rtl8xxxu_bss_info_changed(struct ieee80211_hw *hw, struct ieee80211_vif *vif,
 	if (changed & BSS_CHANGED_BASIC_RATES) {
 		dev_dbg(dev, "Changed BASIC_RATES!\n");
 		rtl8xxxu_set_basic_rates(priv, bss_conf->basic_rates);
+	}
+
+	if (changed & BSS_CHANGED_TXPOWER) {
+		dev_dbg(dev, "Changed BSS TX power to %u dBm\n", bss_conf->txpower);
+		rtl8xxxu_update_tx_power(priv, bss_conf->txpower);
 	}
 error:
 	return;
@@ -5907,6 +6006,9 @@ static int rtl8xxxu_config(struct ieee80211_hw *hw, u32 changed)
 		priv->fops->config_channel(hw);
 	}
 
+	if (changed & IEEE80211_CONF_CHANGE_POWER)
+		rtl8xxxu_update_tx_power(priv, hw->conf.power_level);
+
 exit:
 	return ret;
 }
@@ -6677,6 +6779,20 @@ exit:
 	return ret;
 }
 
+static void rtl8xxxu_backup_efuse(struct rtl8xxxu_priv *priv)
+{
+	memcpy(priv->cck_tx_power_index_A_backup, priv->cck_tx_power_index_A,
+	       sizeof(priv->cck_tx_power_index_A_backup));
+	memcpy(priv->cck_tx_power_index_B_backup, priv->cck_tx_power_index_B,
+	       sizeof(priv->cck_tx_power_index_B_backup));
+	memcpy(priv->ht40_1s_tx_power_index_A_backup,
+	       priv->ht40_1s_tx_power_index_A,
+	       sizeof(priv->ht40_1s_tx_power_index_A_backup));
+	memcpy(priv->ht40_1s_tx_power_index_B_backup,
+	       priv->ht40_1s_tx_power_index_B,
+	       sizeof(priv->ht40_1s_tx_power_index_B_backup));
+}
+
 static int rtl8xxxu_probe(struct usb_interface *interface,
 			  const struct usb_device_id *id)
 {
@@ -6779,6 +6895,7 @@ static int rtl8xxxu_probe(struct usb_interface *interface,
 		dev_err(&udev->dev, "Fatal - failed to parse EFuse\n");
 		goto exit;
 	}
+	rtl8xxxu_backup_efuse(priv);
 
 	rtl8xxxu_print_chipinfo(priv);
 
