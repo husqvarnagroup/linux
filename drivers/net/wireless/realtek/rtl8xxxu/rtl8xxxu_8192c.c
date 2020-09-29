@@ -556,6 +556,7 @@ struct rtl8xxxu_fileops rtl8192cu_fops = {
 	.enable_rf = rtl8xxxu_gen1_enable_rf,
 	.disable_rf = rtl8xxxu_gen1_disable_rf,
 	.usb_quirks = rtl8xxxu_gen1_usb_quirks,
+	.dbm_to_txpwridx = rtl8xxxu_gen1_dbm_to_txpwridx,
 	.set_tx_power = rtl8xxxu_gen1_set_tx_power,
 	.update_rate_mask = rtl8xxxu_update_rate_mask,
 	.report_connect = rtl8xxxu_gen1_report_connect,
