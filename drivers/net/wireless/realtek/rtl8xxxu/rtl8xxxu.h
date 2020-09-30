@@ -1319,6 +1319,7 @@ struct rtl8xxxu_priv {
 	struct rtl8723au_idx ht20_tx_power_diff[RTL8723B_TX_COUNT];
 	struct rtl8723au_idx ht40_tx_power_diff[RTL8723B_TX_COUNT];
 	struct rtl8xxxu_power_base *power_base;
+	u8 cur_cck_txpwridx, cur_ofdm24g_txpwridx;
 	u32 chip_cut:4;
 	u32 rom_rev:4;
 	u32 is_multi_func:1;
@@ -1427,6 +1428,7 @@ struct rtl8xxxu_fileops {
 	void (*disable_rf) (struct rtl8xxxu_priv *priv);
 	void (*usb_quirks) (struct rtl8xxxu_priv *priv);
 	u8 (*dbm_to_txpwridx) (struct rtl8xxxu_priv *priv, u16 mode, int dbm);
+	int (*get_tx_power) (struct rtl8xxxu_priv *priv);
 	void (*set_tx_power) (struct rtl8xxxu_priv *priv, int channel,
 			      bool ht40);
 	void (*update_rate_mask) (struct rtl8xxxu_priv *priv,
@@ -1513,6 +1515,7 @@ u8 rtl8xxxu_gen1_dbm_to_txpwridx(struct rtl8xxxu_priv *priv,
 				 u16 mode, int dbm);
 void rtl8xxxu_gen1_set_tx_power(struct rtl8xxxu_priv *priv,
 				int channel, bool ht40);
+int rtl8xxxu_gen1_get_tx_power(struct rtl8xxxu_priv *priv);
 void rtl8xxxu_gen1_config_channel(struct ieee80211_hw *hw);
 void rtl8xxxu_gen2_config_channel(struct ieee80211_hw *hw);
 void rtl8xxxu_gen1_usb_quirks(struct rtl8xxxu_priv *priv);
