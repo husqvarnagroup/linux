@@ -558,6 +558,7 @@ struct rtl8xxxu_fileops rtl8192cu_fops = {
 	.usb_quirks = rtl8xxxu_gen1_usb_quirks,
 	.dbm_to_txpwridx = rtl8xxxu_gen1_dbm_to_txpwridx,
 	.set_tx_power = rtl8xxxu_gen1_set_tx_power,
+	.get_tx_power = rtl8xxxu_gen1_get_tx_power,
 	.update_rate_mask = rtl8xxxu_update_rate_mask,
 	.report_connect = rtl8xxxu_gen1_report_connect,
 	.fill_txdesc = rtl8xxxu_fill_txdesc_v1,
