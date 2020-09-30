@@ -1414,6 +1414,55 @@ rtl8xxxu_gen1_dbm_to_txpwridx(struct rtl8xxxu_priv *priv, u16 mode, int dbm)
 	return txpwridx;
 }
 
+static int
+rtl8xxxu_gen1_txpwridx_to_dbm(struct rtl8xxxu_priv *priv, u16 mode, u8 idx)
+{
+	int offset;
+	int pwrout_dbm;
+
+	switch (mode) {
+	case WIRELESS_MODE_B:
+		offset = -7;
+		break;
+	case WIRELESS_MODE_G:
+	case WIRELESS_MODE_N_24G:
+		offset = -8;
+		break;
+	default:
+		offset = -8;
+		break;
+	}
+	pwrout_dbm = idx / 2 + offset;
+
+	return pwrout_dbm;
+}
+
+int
+rtl8xxxu_gen1_get_tx_power(struct rtl8xxxu_priv *priv)
+{
+	u8 txpwr_level;
+	int txpwr_dbm;
+
+	txpwr_level = priv->cur_cck_txpwridx;
+	txpwr_dbm = rtl8xxxu_gen1_txpwridx_to_dbm(priv, WIRELESS_MODE_B,
+						  txpwr_level);
+	txpwr_level = priv->cur_ofdm24g_txpwridx +
+		      priv->ofdm_tx_power_index_diff[1].a;
+
+	if (rtl8xxxu_gen1_txpwridx_to_dbm(priv, WIRELESS_MODE_G, txpwr_level)
+	    > txpwr_dbm)
+		txpwr_dbm = rtl8xxxu_gen1_txpwridx_to_dbm(priv, WIRELESS_MODE_G,
+							  txpwr_level);
+	txpwr_level = priv->cur_ofdm24g_txpwridx;
+	if (rtl8xxxu_gen1_txpwridx_to_dbm(priv, WIRELESS_MODE_N_24G,
+					  txpwr_level) > txpwr_dbm)
+		txpwr_dbm = rtl8xxxu_gen1_txpwridx_to_dbm(priv,
+							  WIRELESS_MODE_N_24G,
+							  txpwr_level);
+
+	return txpwr_dbm;
+}
+
 void
 rtl8xxxu_gen1_set_tx_power(struct rtl8xxxu_priv *priv, int channel, bool ht40)
 {
@@ -4586,10 +4635,12 @@ static void rtl8xxxu_update_tx_power(struct rtl8xxxu_priv *priv, int dbm)
 	ofdm_txpwridx = priv->fops->dbm_to_txpwridx(priv, WIRELESS_MODE_N_24G,
 						    dbm);
 
-	if (ofdm_txpwridx - priv->ofdm_tx_power_index_diff[1].a > 0)
+	if (ofdm_txpwridx - priv->ofdm_tx_power_index_diff[1].a > 0) {
+		/* refer to rtlefuse->legacy_ht_txpowerdiff in vendor driver */
 		ofdm_txpwridx -= priv->ofdm_tx_power_index_diff[1].a;
-	else
+	} else {
 		ofdm_txpwridx = 0;
+	}
 
 	group = rtl8xxxu_gen1_channel_to_group(channel);
 
@@ -4602,6 +4653,9 @@ static void rtl8xxxu_update_tx_power(struct rtl8xxxu_priv *priv, int dbm)
 		priv->ht40_1s_tx_power_index_A[group] = ofdm_txpwridx;
 		priv->ht40_1s_tx_power_index_B[group] = ofdm_txpwridx;
 	}
+
+	priv->cur_cck_txpwridx = priv->cck_tx_power_index_A[group];
+	priv->cur_ofdm24g_txpwridx = priv->ht40_1s_tx_power_index_A[group];
 
 	priv->fops->set_tx_power(priv, channel, ht40);
 }
@@ -6708,6 +6762,7 @@ static const struct ieee80211_ops rtl8xxxu_ops = {
 	.set_key = rtl8xxxu_set_key,
 	.ampdu_action = rtl8xxxu_ampdu_action,
 	.sta_statistics = rtl8xxxu_sta_statistics,
+	.get_txpower = rtl8xxxu_get_txpower,
 };
 
 static int rtl8xxxu_parse_usb(struct rtl8xxxu_priv *priv,
