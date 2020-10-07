@@ -6988,6 +6988,8 @@ static int rtl8xxxu_probe(struct usb_interface *interface,
 		sband->ht_cap.mcs.rx_mask[1] = 0xff;
 		sband->ht_cap.cap |= IEEE80211_HT_CAP_SGI_40;
 	}
+	/* only one spatial-stream STBC RX supported */
+	sband->ht_cap.cap |= (1 << IEEE80211_HT_CAP_RX_STBC_SHIFT);
 	sband->ht_cap.mcs.tx_params = IEEE80211_HT_MCS_TX_DEFINED;
 	/*
 	 * Some APs will negotiate HT20_40 in a noisy environment leading
