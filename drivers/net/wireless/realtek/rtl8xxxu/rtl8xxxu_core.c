@@ -5314,6 +5314,11 @@ static void rtl8xxxu_rx_parse_phystats(struct rtl8xxxu_priv *priv,
 		rx_status->signal =
 			(phy_stats->cck_sig_qual_ofdm_pwdb_all >> 1) - 110;
 	}
+
+	// refers to rtlxxxx_rx_query_desc of rtlwifi/rtlxxxx/trx.c
+	// needs to verify on RTL8723BU
+	if (priv->rtl_chip != RTL8723B && priv->rtl_chip != RTL8192E)
+		rx_status->signal += 10;
 }
 
 static void rtl8xxxu_free_rx_resources(struct rtl8xxxu_priv *priv)
