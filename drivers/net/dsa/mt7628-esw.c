@@ -61,28 +61,32 @@
 
 #define MT7628_ESW_FPA			0x84
 
-#define MT7628_ESW_SOCPC		0x8c
+#define MT7628_ESW_SOCPC		0x8c /* SoC Port Control */
 #define MT7628_ESW_SOCPC_DISUN2CPU_S	0
 #define MT7628_ESW_SOCPC_DISMC2CPU_S	8
 #define MT7628_ESW_SOCPC_DISBC2CPU_S	16
 #define MT7628_ESW_SOCPC_CRC_PADDING	BIT(25)
 
-#define MT7628_ESW_POC0			0x90
+#define MT7628_ESW_POC0			0x90 /* Port Control 0 */
 #define MT7628_ESW_POC0_EN_BP_S		0
 #define MT7628_ESW_POC0_EN_FC_S		8
 #define MT7628_ESW_POC0_DIS_RMC2CPU_S	16
 #define MT7628_ESW_POC0_DIS_PORT_M	0x7f
 #define MT7628_ESW_POC0_DIS_PORT_S	23
 
-#define MT7628_ESW_POC2			0x98
+#define MT7628_ESW_POC2			0x98 /* Port Control 2 */
 #define MT7628_ESW_POC2_UNTAG_EN_M	0xff
 #define MT7628_ESW_POC2_UNTAG_EN_S	0
 #define MT7628_ESW_POC2_ENAGING_S	8
 #define MT7628_ESW_POC2_DIS_UC_PAUSE_S	16
 
-#define MT7628_ESW_SGC			0x9c
+#define MT7628_ESW_SGC			0x9c /* Switch Global Control */
+#define MT7628_ESW_SGC_BC_STORM_MASK	0x3
+#define MT7628_ESW_SGC_BC_STORM_SHIFT	4
+#define MT7628_ESW_SGC_LED_FREQ_MASK	0x3
+#define MT7628_ESW_SGC_LED_FREQ_SHIFT	23
 
-#define MT7628_ESW_PCR0			0xc0
+#define MT7628_ESW_PCR0			0xc0 /* PHY Control Register 0 */
 #define PCR0_PHY_ADDR			GENMASK(4, 0)
 #define PCR0_PHY_REG			GENMASK(12, 8)
 #define PCR0_WT_PHY_CMD			BIT(13)
@@ -97,7 +101,7 @@
 // test-only: FPA1 vs FPA2 (documentation vs OpenWrt v4.14 driver)
 #define MT7628_ESW_FPA2			0xc8
 
-#define MT7628_ESW_FCT2			0xcc
+#define MT7628_ESW_FCT2			0xcc /* Flow Control Threshold 2 */
 
 #define MT7628_ESW_SGC2			0xe4
 #define MT7628_ESW_SGC2_DOUBLE_TAG_M	0x7f
@@ -112,12 +116,6 @@
 #define MT7628_ESW_P4LED		0xb4
 
 #define MT7628_ESW_VLAN_NONE		0xfff
-
-#define MT7628_ESW_GSC_BC_STROM_MASK	0x3
-#define MT7628_ESW_GSC_BC_STROM_SHIFT	4
-
-#define MT7628_ESW_GSC_LED_FREQ_MASK	0x3
-#define MT7628_ESW_GSC_LED_FREQ_SHIFT	23
 
 #define MT7628_ESW_PORT0		0
 #define MT7628_ESW_PORT1		1
@@ -180,7 +178,9 @@ struct mt7628_esw_priv {
 	// test-only: all needed?
 	bool global_vlan_enable;
 	bool alt_vlan_disable;
+	/* 0x00: disable, 0x01: 64, 0x10: 96; 0x11: 128 */
 	int bc_storm_protect;
+	/* 0x00: 30ms, 0x01: 60ms, 0x10: 240ms, 0x11: 480 ms */
 	int led_frequency;
 
 	struct mt7628_esw_vlan vlans[MT7628_ESW_NUM_VLANS];
@@ -307,16 +307,16 @@ static void mt7628_esw_set_pvid(struct mt7628_esw_priv *priv,
 		       (pvid & MT7628_ESW_PVIDC_PVID_M) << s);
 }
 
-static void mt7628_esw_set_gsc(struct mt7628_esw_priv *priv)
+static void mt7628_esw_set_sgc(struct mt7628_esw_priv *priv)
 {
 	mt7628_esw_rmw(priv, MT7628_ESW_SGC,
-		       MT7628_ESW_GSC_BC_STROM_MASK <<
-		       MT7628_ESW_GSC_BC_STROM_SHIFT,
-		       priv->bc_storm_protect << MT7628_ESW_GSC_BC_STROM_SHIFT);
+		       MT7628_ESW_SGC_BC_STORM_MASK <<
+		       MT7628_ESW_SGC_BC_STORM_SHIFT,
+		       priv->bc_storm_protect << MT7628_ESW_SGC_BC_STORM_SHIFT);
 	mt7628_esw_rmw(priv, MT7628_ESW_SGC,
-		       MT7628_ESW_GSC_LED_FREQ_MASK <<
-		       MT7628_ESW_GSC_LED_FREQ_SHIFT,
-		       priv->led_frequency << MT7628_ESW_GSC_LED_FREQ_SHIFT);
+		       MT7628_ESW_SGC_LED_FREQ_MASK <<
+		       MT7628_ESW_SGC_LED_FREQ_SHIFT,
+		       priv->led_frequency << MT7628_ESW_SGC_LED_FREQ_SHIFT);
 }
 
 static unsigned mt7628_esw_get_port_disable(struct mt7628_esw_priv *priv)
@@ -336,7 +336,7 @@ static void mt7628_esw_set_port_disable(struct mt7628_esw_priv *priv,
 	unsigned changed;
 	int i;
 
-//	printk("%s (%d): disable_mask=%08x\n", __func__, __LINE__, disable_mask); // test-only
+	printk("%s (%d): disable_mask=%08x\n", __func__, __LINE__, disable_mask); // test-only
 	old_mask = mt7628_esw_get_port_disable(priv);
 	changed = old_mask ^ disable_mask;
 	enable_mask = old_mask & disable_mask;
@@ -415,7 +415,7 @@ static int mt7628_esw_apply_config(struct mt7628_esw_priv *priv)
 		}
 	}
 
-	mt7628_esw_set_gsc(priv);
+	mt7628_esw_set_sgc(priv);
 	mt7628_esw_set_port_disable(priv, disable);
 	mt7628_esw_rmw(priv, MT7628_ESW_SGC2,
 		       (MT7628_ESW_SGC2_DOUBLE_TAG_M << MT7628_ESW_SGC2_DOUBLE_TAG_S),
@@ -446,6 +446,9 @@ static int mt7628_esw_phy_read(struct dsa_switch *ds, int port, int regnum)
 	u32 val;
 	int ret;
 
+	printk("%s (%d): port=%d, reg=x%x\n", __func__, __LINE__, port,
+	       regnum); // test-only
+
 	ret = mii_mgr_read(priv, port, regnum, &val);
 	if (ret == 0xffff)
 		return 0xffff;
@@ -457,6 +460,9 @@ static int mt7628_esw_phy_write(struct dsa_switch *ds, int port, int regnum,
 			    u16 val)
 {
 	struct mt7628_esw_priv *priv = ds->priv;
+
+	printk("%s (%d): port=%d, reg=x%x\n", __func__, __LINE__, port,
+	       regnum); // test-only
 
 	return mii_mgr_write(priv, port, regnum, val);
 }
@@ -474,6 +480,66 @@ mt7628_esw_get_tag_protocol(struct dsa_switch *ds, int port,
 	}
 }
 
+static void mt7628_esw_detect_carrier(struct mt7628_esw_priv *priv) {
+	int i;
+	u32 link = readl(priv->base + MT7628_ESW_POA);
+
+	printk("%s (%d): link=%08x\n", __func__, __LINE__, link); // test-only
+
+	link >>= MT7628_ESW_POA_LINK_SHIFT;
+	link &= MT7628_ESW_POA_LINK_MASK;
+
+	for (i = 0; i < MT7628_ESW_NUM_LEDS; i++) {
+		const struct dsa_port *dp = dsa_to_port(priv->ds, i);
+		const struct dsa_port *dp_cpu =
+			dsa_to_port(priv->ds, MT7628_ESW_CPU_PORT);
+
+		/* Skip disabled ports */
+		if (!priv->ports[i].enable)
+			continue;
+
+		if(dp) {
+			dev_info(priv->ds->dev,
+				 "port %d link changed 0x%x, setting slave\n",
+				 i,
+				 (u8)(link & BIT(i)));
+
+			if(dp->slave) {
+				if (link & BIT(i))
+					netif_carrier_on(dp->slave);
+				else
+					netif_carrier_off(dp->slave);
+			} else {
+				dev_info(priv->ds->dev, "slave-slave is NULL");
+			}
+		} else {
+			dev_info(priv->ds->dev, "slave port is NULL");
+		}
+
+		if(dp_cpu) {
+			dev_info(priv->ds->dev,
+				 "port %d link changed 0x%x, setting master\n",
+				 i,
+				 (u8)(link & BIT(i)));
+
+			if(dp_cpu->slave) {
+				/*
+				 * On the IOT mode (only PHY, no switch used) also
+				 * set link on the master net node (eth0)
+				 */
+				if (link & BIT(i))
+					netif_carrier_on(dp_cpu->slave);
+				else
+					netif_carrier_off(dp_cpu->slave);
+			} else {
+				dev_info(priv->ds->dev, "master-slave is NULL");
+			}
+		} else {
+			dev_info(priv->ds->dev, "master port is NULL");
+		}
+	}
+}
+
 static int mt7628_esw_setup(struct dsa_switch *ds)
 {
 	struct mt7628_esw_priv *priv = ds->priv;
@@ -488,15 +554,17 @@ static int mt7628_esw_setup(struct dsa_switch *ds)
 	}
 	mdelay(10);
 
-	/* Vodoo from original driver */
+	/* Everything not documented is vodoo from original driver*/
+	/* Bits 7:0: Per Port Output Threshold */
 	writel(0xc8a07850, base + MT7628_ESW_FCT0);
+	/* Set everything to reset values */
 	writel(0x00000000, base + MT7628_ESW_SGC2);
 
 	/* Port priority 1 for all ports, vlan enabled */
 	writel(0x00005555 | (MT7628_ESW_PORTS_ALL << MT7628_ESW_PFC1_EN_VLAN_S),
 	       base + MT7628_ESW_PFC1);
 
-	/* Enable all ports, Back Pressure and Flow Control */
+	/* Enable all ports, Back Pressure and Flow Control on them */
 	writel(((MT7628_ESW_PORTS_ALL << MT7628_ESW_POC0_EN_BP_S) |
 		(MT7628_ESW_PORTS_ALL << MT7628_ESW_POC0_EN_FC_S)),
 	       base + MT7628_ESW_POC0);
@@ -506,17 +574,42 @@ static int mt7628_esw_setup(struct dsa_switch *ds)
 		(MT7628_ESW_PORTS_NOCPU << MT7628_ESW_POC2_UNTAG_EN_S)),
 	       base + MT7628_ESW_POC2);
 
+	/*
+	 * - Set Unknown IPv6 Multicast Frame Excludes CPU rule (default)
+	 * - Global queue pointer must drop threshold: 18
+	 * - Global queue pointer drop packets hits: 16
+	 * - MC packets per port threshold: 0x0C (default)
+	 */
 	writel(0x0002500c, base + MT7628_ESW_FCT2);
 
-	/* 300s aging timer, max packet len 1536, broadcast storm prevention
-	 * disabled, disable collision abort, mac xor48 hash, 10 packet back
-	 * pressure jam, GMII disable was_transmit, back pressure disabled,
-	 * 30ms led flash, unmatched IGMP as broadcast, rmc tb fault to all
-	 * ports.
+	/*
+	 * - Disable backoff algorithm
+	 * - Disable length of received frame check
+	 * - Unknown IP multicast frame: BC (default)
+	 * - Unknown reserved multicast frame: to all (default)
+	 * - 30ms led flash (default)
+	 * - The Threshold Of Memory Bisshop: skip if fail 16 (default)
+	 * - Skip build in self hop (default)
+	 * - Back pressure mode jamALL, jam packet until the BP condition is
+	 *   released (default),
+	 * - GMII disable was_transmit (default)
+	 * - 10 packet back pressure jam (default)
+	 * - Disable The Collision Back Off Timer (default)
+	 * - MAC address XOR48 hashing algorithm
+	 * - Disable collision abort
+	 * - Maximum packet length 1536
+	 * - Broadcast storm prevention disabled (default)
+	 * - 300s aging timer (default)
 	 */
 	writel(0x0008a301, base + MT7628_ESW_SGC);
 
-	/* Setup SoC Port control register */
+	/*
+	 * Setup SoC Port control register:
+	 * - Enable CRC calculation by LAN port
+	 * - Set CPU selection to port 6
+	 * - Disable forwarding of brodcast, multicast and unknown frames
+	 *   to CPU.
+	 */
 	writel((MT7628_ESW_SOCPC_CRC_PADDING |
 		(MT7628_ESW_PORTS_CPU << MT7628_ESW_SOCPC_DISUN2CPU_S) |
 		(MT7628_ESW_PORTS_CPU << MT7628_ESW_SOCPC_DISMC2CPU_S) |
@@ -597,8 +690,12 @@ static int mt7628_esw_setup(struct dsa_switch *ds)
 	mt7628_esw_apply_config(priv);
 
 	/* Only unmask the port change interrupt */
-	writel(MT7628_ESW_PORT_ST_CHG, priv->base + MT7628_ESW_ISR);
+	writel(MT7628_ESW_PORT_ST_CHG, base + MT7628_ESW_ISR);
 	writel(~MT7628_ESW_PORT_ST_CHG, base + MT7628_ESW_IMR);
+
+	printk("%s (%d)\n", __func__, __LINE__); // test-only
+
+	mt7628_esw_detect_carrier(priv);
 
 	return 0;
 }
@@ -606,43 +703,12 @@ static int mt7628_esw_setup(struct dsa_switch *ds)
 static irqreturn_t mt7628_esw_interrupt(int irq, void *_priv)
 {
 	struct mt7628_esw_priv *priv = (struct mt7628_esw_priv *)_priv;
-	u32 status;
-	int i;
+	const u32 status = readl(priv->base + MT7628_ESW_ISR);
 
-	status = readl(priv->base + MT7628_ESW_ISR);
+	printk("%s (%d)\n", __func__, __LINE__); // test-only
+
 	if (status & MT7628_ESW_PORT_ST_CHG) {
-		u32 link = readl(priv->base + MT7628_ESW_POA);
-//		printk("%s (%d): link=%08x\n", __func__, __LINE__, link); // test-only
-
-		link >>= MT7628_ESW_POA_LINK_SHIFT;
-		link &= MT7628_ESW_POA_LINK_MASK;
-
-		for (i = 0; i < MT7628_ESW_NUM_LEDS; i++) {
-			const struct dsa_port *dp = dsa_to_port(priv->ds, i);
-			const struct dsa_port *dp_cpu =
-				dsa_to_port(priv->ds, MT7628_ESW_CPU_PORT);
-
-			/* Skip disabled ports */
-			if (!priv->ports[i].enable)
-				continue;
-
-			dev_info(priv->ds->dev, "port %d link changed 0x%x\n",
-				 i, link);
-
-			if (link & BIT(i))
-				netif_carrier_on(dp->slave);
-			else
-				netif_carrier_off(dp->slave);
-
-			/*
-			 * On the IOT mode (only PHY, no switch used) also
-			 * set link on the master net node (eth0)
-			 */
-			if (link & BIT(i))
-				netif_carrier_on(dp_cpu->slave);
-			else
-				netif_carrier_off(dp_cpu->slave);
-		}
+		mt7628_esw_detect_carrier(priv);
 	}
 
 	writel(status, priv->base + MT7628_ESW_ISR);
@@ -656,7 +722,12 @@ static int mt7628_esw_port_enable(struct dsa_switch *ds, int port,
 {
 	struct mt7628_esw_priv *priv = ds->priv;
 
-//	printk("%s (%d): port=%d\n", __func__, __LINE__, port); // test-only
+	printk("%s (%d): port=%d, link: %d\n",
+	       __func__,
+	       __LINE__,
+	       port,
+	       phy ? phy->link : -1); // test-only
+
 	/* Skip port 0 enabling */
 	if (port == 0)
 		return -ENODEV;
@@ -674,7 +745,7 @@ static void mt7628_esw_port_disable(struct dsa_switch *ds, int port)
 {
 	struct mt7628_esw_priv *priv = ds->priv;
 
-//	printk("%s (%d): port=%d\n", __func__, __LINE__, port); // test-only
+	printk("%s (%d): port=%d\n", __func__, __LINE__, port); // test-only
 	priv->ports[port].enable = false;
 
 	/* Apply the new configuration */
@@ -684,14 +755,34 @@ static void mt7628_esw_port_disable(struct dsa_switch *ds, int port)
 static int mt7628_esw_port_bridge_join(struct dsa_switch *ds, int port,
 				       struct net_device *bridge)
 {
-//	printk("%s (%d)\n", __func__, __LINE__); // test-only
+	printk("%s (%d)\n", __func__, __LINE__);
+
 	return 0;
 }
 
 static void mt7628_esw_port_bridge_leave(struct dsa_switch *ds, int port,
 					 struct net_device *bridge)
 {
-//	printk("%s (%d)\n", __func__, __LINE__); // test-only
+	printk("%s (%d)\n", __func__, __LINE__);
+}
+
+static void
+mt7628_esw_port_phylink_fixed_state(struct dsa_switch *ds, int port,
+				    struct phylink_link_state *state)
+{
+
+	printk("%s (%d) Setting link down\n", __func__, __LINE__);
+	state->link = 0;
+}
+
+static int
+mt7628_esw_port_phylink_mac_link_state(struct dsa_switch *ds, int port,
+				       struct phylink_link_state *state)
+{
+	printk("%s (%d) Setting link down\n", __func__, __LINE__);
+	state->link = 0;
+
+	return 0;
 }
 
 static const struct dsa_switch_ops mt7628_esw_ops = {
@@ -705,6 +796,9 @@ static const struct dsa_switch_ops mt7628_esw_ops = {
 
 	.port_bridge_join	= mt7628_esw_port_bridge_join,
 	.port_bridge_leave	= mt7628_esw_port_bridge_leave,
+
+	.phylink_fixed_state	= mt7628_esw_port_phylink_fixed_state,
+	.phylink_mac_link_state	= mt7628_esw_port_phylink_mac_link_state,
 };
 
 static int mt7628_esw_probe(struct platform_device *pdev)
@@ -768,7 +862,7 @@ static const struct of_device_id mt7628_esw_of_match[] = {
 };
 MODULE_DEVICE_TABLE(of, mt7628_of_match);
 
-static struct platform_driver mt7628_mdio_driver = {
+static struct platform_driver mt7628_esw_driver = {
 	.probe  = mt7628_esw_probe,
 	.remove = mt7628_esw_remove,
 	.driver = {
@@ -777,7 +871,7 @@ static struct platform_driver mt7628_mdio_driver = {
 	},
 };
 
-module_platform_driver(mt7628_mdio_driver);
+module_platform_driver(mt7628_esw_driver);
 
 MODULE_AUTHOR("Stefan Roese <sr@denx.de>");
 MODULE_DESCRIPTION("Driver for Mediatek MT7628 Switch (ESW)");
