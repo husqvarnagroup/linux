@@ -684,9 +684,9 @@ static int mt7628_esw_port_enable(struct dsa_switch *ds, int port,
 	struct mt7628_esw_priv *priv = ds->priv;
 
 //	printk("%s (%d): port=%d\n", __func__, __LINE__, port); // test-only
-	/* Skip port 0 enabling */
+	/* Skip port 0 enabling, just return with success */
 	if (port == 0)
-		return -ENODEV;
+		return 0;
 
 	priv->ports[port].enable = true;
 
