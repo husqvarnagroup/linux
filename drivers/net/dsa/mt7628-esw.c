@@ -673,9 +673,8 @@ static int mt7628_esw_port_enable(struct dsa_switch *ds, int port,
 	struct mt7628_esw_priv *priv = ds->priv;
 
 //	printk("%s (%d): port=%d\n", __func__, __LINE__, port); // test-only
-	/* Skip port 0 enabling */
-	if (port == 0)
-		return -ENODEV;
+	if (!dsa_is_user_port(ds, port))
+		return 0;
 
 	priv->ports[port].enable = true;
 
@@ -691,6 +690,9 @@ static void mt7628_esw_port_disable(struct dsa_switch *ds, int port)
 	struct mt7628_esw_priv *priv = ds->priv;
 
 //	printk("%s (%d): port=%d\n", __func__, __LINE__, port); // test-only
+	if (!dsa_is_user_port(ds, port))
+		return;
+
 	priv->ports[port].enable = false;
 
 	/* Apply the new configuration */
