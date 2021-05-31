@@ -4406,6 +4406,7 @@ void rtl8xxxu_update_rate_mask(struct rtl8xxxu_priv *priv,
 
 	memset(&h2c, 0, sizeof(struct h2c_cmd));
 
+	ramask = 0xfffff;
 	h2c.ramask.cmd = H2C_SET_RATE_MASK;
 	h2c.ramask.mask_lo = cpu_to_le16(ramask & 0xffff);
 	h2c.ramask.mask_hi = cpu_to_le16(ramask >> 16);
@@ -5084,6 +5085,7 @@ rtl8xxxu_fill_txdesc_v1(struct ieee80211_hw *hw, struct ieee80211_hdr *hdr,
 	 */
 	tx_desc->txdw4 |= cpu_to_le32(rts_rate << TXDESC32_RTS_RATE_SHIFT);
 	if (rate_flags & IEEE80211_TX_RC_USE_RTS_CTS) {
+		tx_desc->txdw4 |= cpu_to_le32(0x00000008); /* RTS Rate = 24M */
 		tx_desc->txdw4 |= cpu_to_le32(TXDESC32_RTS_CTS_ENABLE);
 		tx_desc->txdw4 |= cpu_to_le32(TXDESC32_HW_RTS_ENABLE);
 	} else if (rate_flags & IEEE80211_TX_RC_USE_CTS_PROTECT) {
