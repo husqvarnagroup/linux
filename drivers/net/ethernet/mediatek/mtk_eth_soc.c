@@ -2948,6 +2948,7 @@ static const struct net_device_ops mtk_netdev_ops = {
 static int mtk_add_mac(struct mtk_eth *eth, struct device_node *np)
 {
 	const __be32 *_id = of_get_property(np, "reg", NULL);
+	const char *const name = of_get_property(np, "label", NULL);
 	phy_interface_t phy_mode;
 	struct phylink *phylink;
 	struct mtk_mac *mac;
@@ -3019,6 +3020,9 @@ static int mtk_add_mac(struct mtk_eth *eth, struct device_node *np)
 	}
 
 	mac->phylink = phylink;
+
+	if (name)
+		strscpy(eth->netdev[id]->name, name, IFNAMSIZ);
 
 	SET_NETDEV_DEV(eth->netdev[id], eth->dev);
 	eth->netdev[id]->watchdog_timeo = 5 * HZ;
