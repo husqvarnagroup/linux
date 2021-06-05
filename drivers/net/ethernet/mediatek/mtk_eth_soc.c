@@ -2821,6 +2821,8 @@ static int mtk_add_mac(struct mtk_eth *eth, struct device_node *np)
 	struct phylink *phylink;
 	struct mtk_mac *mac;
 	int id, err;
+	const char *name;
+
 
 	if (!_id) {
 		dev_err(eth->dev, "missing mac id\n");
@@ -2888,6 +2890,10 @@ static int mtk_add_mac(struct mtk_eth *eth, struct device_node *np)
 	}
 
 	mac->phylink = phylink;
+
+	name = of_get_property(np, "label", NULL);
+	if (name)
+		strncpy(eth->netdev[id]->name, name, IFNAMSIZ);
 
 	SET_NETDEV_DEV(eth->netdev[id], eth->dev);
 	eth->netdev[id]->watchdog_timeo = 5 * HZ;
