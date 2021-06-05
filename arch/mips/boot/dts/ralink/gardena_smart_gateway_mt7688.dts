@@ -179,6 +179,7 @@
 		compatible = "mediatek,eth-mac";
 		reg = <0>;
 		phy-mode = "mii";
+		label = "mac0";
 
 		fixed-link {
 			speed = <100>;
@@ -197,7 +198,7 @@
 
 		port@0 {
 			reg = <0>;
-			label = "lan";
+			label = "eth0";
 		};
 
 		port@6 {
