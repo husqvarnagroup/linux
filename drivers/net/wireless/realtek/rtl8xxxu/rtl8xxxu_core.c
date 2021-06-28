@@ -1680,7 +1680,7 @@ static int rtl8xxxu_identify_chip(struct rtl8xxxu_priv *priv)
 		priv->rx_paths = 1;
 		priv->tx_paths = 1;
 		priv->rtl_chip = RTL8188C;
-		priv->usb_interrupts = 1;
+		priv->usb_interrupts = 0;
 		priv->has_wifi = 1;
 	}
 
