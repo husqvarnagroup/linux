@@ -1180,6 +1180,8 @@ void rtl8xxxu_gen1_config_channel(struct ieee80211_hw *hw)
 		else
 			rsr |= RSR_RSC_LOWER_SUB_CHANNEL;
 		rtl8xxxu_write32(priv, REG_RESPONSE_RATE_SET, rsr);
+		val32 = rtl8xxxu_read32(priv, REG_RESPONSE_RATE_SET);
+		printk("%s reg rrsr %#08x\n", __func__, val32);
 
 		val32 = rtl8xxxu_read32(priv, REG_FPGA0_RF_MODE);
 		val32 |= FPGA_RF_MODE;
@@ -4143,6 +4145,8 @@ static int rtl8xxxu_init_device(struct ieee80211_hw *hw)
 	val32 &= ~RESPONSE_RATE_BITMAP_ALL;
 	val32 |= RESPONSE_RATE_RRSR_CCK_ONLY_1M;
 	rtl8xxxu_write32(priv, REG_RESPONSE_RATE_SET, val32);
+	val32 = rtl8xxxu_read32(priv, REG_RESPONSE_RATE_SET);
+	printk("%s reg rrsr %#08x\n", __func__, val32);
 
 	/* CCK = 0x0a, OFDM = 0x10 */
 	rtl8xxxu_set_spec_sifs(priv, 0x10, 0x10);
@@ -4561,10 +4565,14 @@ static void rtl8xxxu_set_basic_rates(struct rtl8xxxu_priv *priv, u32 rate_cfg)
 
 	rate_cfg &= RESPONSE_RATE_BITMAP_ALL;
 
+#define RRSR_INIT_2G 0x15f
+#define RRSR_INIT_5G 0x150
 	val32 = rtl8xxxu_read32(priv, REG_RESPONSE_RATE_SET);
-	val32 &= ~RESPONSE_RATE_BITMAP_ALL;
+	val32 &= RRSR_INIT_2G;
 	val32 |= rate_cfg;
 	rtl8xxxu_write32(priv, REG_RESPONSE_RATE_SET, val32);
+	val32 = rtl8xxxu_read32(priv, REG_RESPONSE_RATE_SET);
+	printk("%s rate_cfg %#08x reg rrsr %#08x\n", __func__, rate_cfg, val32);
 
 	dev_dbg(&priv->udev->dev, "%s: rates %08x\n", __func__,	rate_cfg);
 
@@ -4801,7 +4809,10 @@ rtl8xxxu_bss_info_changed(struct ieee80211_hw *hw, struct ieee80211_vif *vif,
 			val32 |= RSR_ACK_SHORT_PREAMBLE;
 		else
 			val32 &= ~RSR_ACK_SHORT_PREAMBLE;
+		val32 |= 0x15f;
 		rtl8xxxu_write32(priv, REG_RESPONSE_RATE_SET, val32);
+		val32 = rtl8xxxu_read32(priv, REG_RESPONSE_RATE_SET);
+		printk("%s reg rrsr %#08x\n", __func__, val32);
 	}
 
 	if (changed & BSS_CHANGED_ERP_SLOT) {
@@ -6312,6 +6323,10 @@ rtl8xxxu_ampdu_action(struct ieee80211_hw *hw, struct ieee80211_vif *vif,
 	struct ieee80211_sta *sta = params->sta;
 	u16 tid = params->tid;
 	enum ieee80211_ampdu_mlme_action action = params->action;
+	u32 val32;
+
+	val32 = rtl8xxxu_read32(priv, REG_RESPONSE_RATE_SET);
+	printk("%s action %d reg rrsr %#08x\n", __func__, action, val32);
 
 	switch (action) {
 	case IEEE80211_AMPDU_TX_START:
