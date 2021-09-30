@@ -6659,6 +6659,127 @@ static void rtl8xxxu_stop(struct ieee80211_hw *hw)
 	rtl8xxxu_free_tx_resources(priv);
 }
 
+#include <linux/debugfs.h>
+#include <linux/seq_file.h>
+
+struct rtl8xxxu_debugfs_priv {
+        struct rtl8xxxu_priv *priv;
+        int (*cb_read)(struct seq_file *m, void *v);
+        ssize_t (*cb_write)(struct file *filp, const char __user *buffer,
+                            size_t count, loff_t *loff);
+        u32 cb_data;
+};
+
+static struct dentry *debugfs_topdir;
+
+static int rtl8xxxu_debug_get_common(struct seq_file *m, void *v)
+{
+        struct rtl8xxxu_debugfs_priv *debugfs_priv = m->private;
+
+        return debugfs_priv->cb_read(m, v);
+}
+
+static int dl_debug_open_common(struct inode *inode, struct file *file)
+{
+        return single_open(file, rtl8xxxu_debug_get_common, inode->i_private);
+}
+
+static const struct file_operations file_ops_common = {
+        .open = dl_debug_open_common,
+        .read = seq_read,
+        .llseek = seq_lseek,
+        .release = single_release,
+};
+
+static int rtl8xxxu_debug_get_macregs(struct seq_file *m, void *v)
+{
+        struct rtl8xxxu_debugfs_priv *debugfs_priv = m->private;
+        struct rtl8xxxu_priv *priv = debugfs_priv->priv;
+        int i, j = 1;
+
+        for (i = 0; i < 0x800; i += 4) {
+		if (j % 4 == 1)
+			seq_printf(m, "0x%03x  ", i);
+                seq_printf(m, " 0x%08x ", rtl8xxxu_read32(priv, i));
+		if ((j++) % 4 == 0)
+			seq_puts(m, "\n");
+        }
+        return 0;
+}
+
+static struct rtl8xxxu_debugfs_priv rtl8xxxu_debug_priv_macregs = {
+        .cb_read = rtl8xxxu_debug_get_macregs,
+        .cb_data = 0,
+};
+
+static int rtl8xxxu_debug_get_bbregs(struct seq_file *m, void *v)
+{
+        struct rtl8xxxu_debugfs_priv *debugfs_priv = m->private;
+        struct rtl8xxxu_priv *priv = debugfs_priv->priv;
+        int i, j = 1;
+
+        for (i = 0x800; i < 0x1000; i += 4) {
+                if (j % 4 == 1)
+                        seq_printf(m, "0x%03x  ", i);
+                seq_printf(m, " 0x%08x ", rtl8xxxu_read32(priv, i));
+                if ((j++) % 4 == 0)
+                        seq_puts(m, "\n");
+        }
+        return 0;
+}
+
+static struct rtl8xxxu_debugfs_priv rtl8xxxu_debug_priv_bbregs = {
+        .cb_read = rtl8xxxu_debug_get_bbregs,
+        .cb_data = 0,
+};
+
+static int rtl8xxxu_debug_get_rfregs(struct seq_file *m, void *v)
+{
+        struct rtl8xxxu_debugfs_priv *debugfs_priv = m->private;
+        struct rtl8xxxu_priv *priv = debugfs_priv->priv;
+        int i, j = 1, path, path_nums;
+
+	if (priv->tx_paths == 1)
+		path_nums = 1;
+	else
+		path_nums = 2;
+
+	for (path = 0; path < path_nums; path ++) {
+		seq_printf(m, "RF_Path(%x)\n", path);
+		for (i = 0; i < 0x100; i++) {
+			if (j % 4 == 1)
+				seq_printf(m, "0x%02x  ", i);
+			seq_printf(m, " 0x%08x ", rtl8xxxu_read_rfreg(priv, path, i));
+			if ((j++) % 4 == 0)
+				seq_puts(m, "\n");
+		}
+	}
+        return 0;
+}
+
+static struct rtl8xxxu_debugfs_priv rtl8xxxu_debug_priv_rfregs = {
+        .cb_read = rtl8xxxu_debug_get_rfregs,
+        .cb_data = 0,
+};
+
+void rtl8xxxu_debugfs_init(struct rtl8xxxu_priv *priv)
+{
+	debugfs_topdir = debugfs_create_dir("rtl8xxxu",
+                                            priv->hw->wiphy->debugfsdir);
+
+	rtl8xxxu_debug_priv_macregs.priv = priv;
+	debugfs_create_file("mac_reg_dump", S_IFREG | 0444, debugfs_topdir, &rtl8xxxu_debug_priv_macregs, &file_ops_common);
+	rtl8xxxu_debug_priv_bbregs.priv = priv;
+	debugfs_create_file("bb_reg_dump", S_IFREG | 0444, debugfs_topdir, &rtl8xxxu_debug_priv_bbregs, &file_ops_common);
+	rtl8xxxu_debug_priv_rfregs.priv = priv;
+	debugfs_create_file("rf_reg_dump", S_IFREG | 0444, debugfs_topdir, &rtl8xxxu_debug_priv_rfregs, &file_ops_common);
+}
+
+void rtl8xxxu_debugfs_remove_topdir(void)
+{
+        debugfs_remove_recursive(debugfs_topdir);
+}
+
 static const struct ieee80211_ops rtl8xxxu_ops = {
 	.tx = rtl8xxxu_tx,
 	.add_interface = rtl8xxxu_add_interface,
@@ -6924,6 +7045,8 @@ static int rtl8xxxu_probe(struct usb_interface *interface,
 		goto exit;
 	}
 
+	rtl8xxxu_debugfs_init(priv);
+
 	return 0;
 
 exit:
@@ -7174,6 +7297,7 @@ static int __init rtl8xxxu_module_init(void)
 static void __exit rtl8xxxu_module_exit(void)
 {
 	usb_deregister(&rtl8xxxu_driver);
+	rtl8xxxu_debugfs_remove_topdir();
 }
 
 
