@@ -1391,6 +1391,7 @@ struct rtl8xxxu_priv {
 	spinlock_t c2hcmd_lock;
 	struct rtl8xxxu_btcoex bt_coex;
 	struct rtl8xxxu_ra_report ra_report;
+	struct dentry *debugfs_dir;
 };
 
 struct rtl8xxxu_rx_urb {
