@@ -6436,6 +6436,139 @@ static void rtl8xxxu_stop(struct ieee80211_hw *hw)
 	rtl8xxxu_free_tx_resources(priv);
 }
 
+#include <linux/debugfs.h>
+#include <linux/seq_file.h>
+
+struct rtl8xxxu_debugfs_priv {
+	struct rtl8xxxu_priv *priv;
+	int (*cb_read)(struct seq_file *m, void *v);
+	ssize_t (*cb_write)(struct file *filp, const char __user *buffer,
+			    size_t count, loff_t *loff);
+	u32 cb_data;
+};
+
+static int rtl8xxxu_debug_get_common(struct seq_file *m, void *v)
+{
+	struct rtl8xxxu_debugfs_priv *debugfs_priv = m->private;
+
+	return debugfs_priv->cb_read(m, v);
+}
+
+static int dl_debug_open_common(struct inode *inode, struct file *file)
+{
+	return single_open(file, rtl8xxxu_debug_get_common, inode->i_private);
+}
+
+static const struct file_operations file_ops_common = {
+	.open = dl_debug_open_common,
+	.read = seq_read,
+	.llseek = seq_lseek,
+	.release = single_release,
+};
+
+static int rtl8xxxu_debug_get_macregs(struct seq_file *m, void *v)
+{
+	struct rtl8xxxu_debugfs_priv *debugfs_priv = m->private;
+	struct rtl8xxxu_priv *priv = debugfs_priv->priv;
+	int i;
+
+	seq_printf(m, "======= MAC REG (%s) =======\n", DRIVER_NAME);
+	for (i = 0; i < 0x800; i += 16) {
+		seq_printf(m, "0x%03x 0x%08x 0x%08x 0x%08x 0x%08x\n", i,
+			   rtl8xxxu_read32(priv, i + 0),
+			   rtl8xxxu_read32(priv, i + 4),
+			   rtl8xxxu_read32(priv, i + 8),
+			   rtl8xxxu_read32(priv, i + 12));
+	}
+	return 0;
+}
+
+static struct rtl8xxxu_debugfs_priv rtl8xxxu_debug_priv_macregs = {
+	.cb_read = rtl8xxxu_debug_get_macregs,
+	.cb_data = 0,
+};
+
+static int rtl8xxxu_debug_get_bbregs(struct seq_file *m, void *v)
+{
+	struct rtl8xxxu_debugfs_priv *debugfs_priv = m->private;
+	struct rtl8xxxu_priv *priv = debugfs_priv->priv;
+	int i;
+
+	seq_printf(m, "======= BB REG (%s) =======\n", DRIVER_NAME);
+	for (i = 0x800; i < 0x1000; i += 16) {
+		seq_printf(
+			m,
+			"0x%03x 0x%08x 0x%08x 0x%08x 0x%08x\n",
+			i, rtl8xxxu_read32(priv, i + 0),
+			rtl8xxxu_read32(priv, i + 4),
+			rtl8xxxu_read32(priv, i + 8),
+			rtl8xxxu_read32(priv, i + 12));
+	}
+	return 0;
+}
+
+static struct rtl8xxxu_debugfs_priv rtl8xxxu_debug_priv_bbregs = {
+	.cb_read = rtl8xxxu_debug_get_bbregs,
+	.cb_data = 0,
+};
+
+static int rtl8xxxu_debug_get_rfregs(struct seq_file *m, void *v)
+{
+	struct rtl8xxxu_debugfs_priv *debugfs_priv = m->private;
+	struct rtl8xxxu_priv *priv = debugfs_priv->priv;
+	int i, path, path_nums;
+	int max = 0x40;
+
+	if (priv->rtl_chip == RTL8822B)
+		max = 0xff;
+
+	if (priv->tx_paths == 1)
+		path_nums = 1;
+	else
+		path_nums = 2;
+
+	for (path = 0; path < path_nums; path++) {
+		seq_printf(m, "======= RF REG (%s) =======\n", DRIVER_NAME);
+		if (path_nums > 1)
+			seq_printf(m, "RF_Path(%d)\n", path);
+		for (i = 0; i < max; i += 4) {
+			seq_printf(m, "0x%02x 0x%08x 0x%08x 0x%08x 0x%08x\n", i,
+				   rtl8xxxu_read_rfreg(priv, path, i),
+				   rtl8xxxu_read_rfreg(priv, path, i + 1),
+				   rtl8xxxu_read_rfreg(priv, path, i + 2),
+				   rtl8xxxu_read_rfreg(priv, path, i + 3));
+		}
+	}
+	return 0;
+}
+
+static struct rtl8xxxu_debugfs_priv rtl8xxxu_debug_priv_rfregs = {
+	.cb_read = rtl8xxxu_debug_get_rfregs,
+	.cb_data = 0,
+};
+
+void rtl8xxxu_debugfs_init(struct rtl8xxxu_priv *priv)
+{
+	priv->debugfs_dir =
+		debugfs_create_dir("rtl8xxxu", priv->hw->wiphy->debugfsdir);
+
+	rtl8xxxu_debug_priv_macregs.priv = priv;
+	debugfs_create_file("mac_reg_dump", S_IFREG | 0400, priv->debugfs_dir,
+			    &rtl8xxxu_debug_priv_macregs, &file_ops_common);
+	rtl8xxxu_debug_priv_bbregs.priv = priv;
+	debugfs_create_file("bb_reg_dump", S_IFREG | 0400, priv->debugfs_dir,
+			    &rtl8xxxu_debug_priv_bbregs, &file_ops_common);
+	rtl8xxxu_debug_priv_rfregs.priv = priv;
+	debugfs_create_file("rf_reg_dump", S_IFREG | 0400, priv->debugfs_dir,
+			    &rtl8xxxu_debug_priv_rfregs, &file_ops_common);
+}
+
+void rtl8xxxu_debugfs_remove(struct rtl8xxxu_priv *priv)
+{
+	debugfs_remove_recursive(priv->debugfs_dir);
+	priv->debugfs_dir = NULL;
+}
+
 static const struct ieee80211_ops rtl8xxxu_ops = {
 	.tx = rtl8xxxu_tx,
 	.add_interface = rtl8xxxu_add_interface,
@@ -6697,6 +6830,8 @@ static int rtl8xxxu_probe(struct usb_interface *interface,
 		goto exit;
 	}
 
+	rtl8xxxu_debugfs_init(priv);
+
 	return 0;
 
 exit:
@@ -6721,6 +6856,8 @@ static void rtl8xxxu_disconnect(struct usb_interface *interface)
 
 	hw = usb_get_intfdata(interface);
 	priv = hw->priv;
+
+	rtl8xxxu_debugfs_remove(priv);
 
 	ieee80211_unregister_hw(hw);
 
