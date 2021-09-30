@@ -1917,6 +1917,7 @@ struct rtl8xxxu_priv {
 	struct rtl8xxxu_ra_report ra_report;
 	struct rtl8xxxu_cfo_tracking cfo_tracking;
 	struct rtl8xxxu_ra_info ra_info;
+	struct dentry *debugfs_dir;
 
 	bool led_registered;
 	char led_name[32];
