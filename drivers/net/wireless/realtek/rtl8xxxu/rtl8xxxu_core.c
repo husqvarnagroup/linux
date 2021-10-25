@@ -6700,7 +6700,7 @@ static int rtl8xxxu_debug_get_macregs(struct seq_file *m, void *v)
 	seq_printf(m, "======= MAC REG =======\n");
 	for (i = 0; i < 0x800; i += 4) {
 		if (j % 4 == 1)
-			seq_printf(m, "0x%03x  ", i);
+			seq_printf(m, "0x%03x", i);
 		seq_printf(m, " 0x%08x ", rtl8xxxu_read32(priv, i));
 		if ((j++) % 4 == 0)
 			seq_puts(m, "\n");
@@ -6722,7 +6722,7 @@ static int rtl8xxxu_debug_get_bbregs(struct seq_file *m, void *v)
 	seq_printf(m, "======= BB REG =======\n");
 	for (i = 0x800; i < 0x1000; i += 4) {
 		if (j % 4 == 1)
-			seq_printf(m, "0x%03x  ", i);
+			seq_printf(m, "0x%03x", i);
 		seq_printf(m, " 0x%08x ", rtl8xxxu_read32(priv, i));
 		if ((j++) % 4 == 0)
 			seq_puts(m, "\n");
@@ -6751,7 +6751,7 @@ static int rtl8xxxu_debug_get_rfregs(struct seq_file *m, void *v)
 		seq_printf(m, "RF_Path(%x)\n", path);
 		for (i = 0; i < 0x100; i++) {
 			if (j % 4 == 1)
-				seq_printf(m, "0x%02x  ", i);
+				seq_printf(m, "0x%02x ", i);
 			seq_printf(m, " 0x%08x ",
 				   rtl8xxxu_read_rfreg(priv, path, i));
 			if ((j++) % 4 == 0)
