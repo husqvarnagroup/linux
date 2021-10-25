@@ -7296,8 +7296,8 @@ static int __init rtl8xxxu_module_init(void)
 
 static void __exit rtl8xxxu_module_exit(void)
 {
-	usb_deregister(&rtl8xxxu_driver);
 	rtl8xxxu_debugfs_remove_topdir();
+	usb_deregister(&rtl8xxxu_driver);
 }
 
 
