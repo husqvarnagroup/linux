@@ -4725,6 +4725,7 @@ static void rtl8xxxu_update_txpower(struct rtl8xxxu_priv *priv, int power)
 {
 	bool ht40 = false;
 	struct ieee80211_hw *hw = priv->hw;
+	struct device *dev = &priv->udev->dev;
 	int channel = hw->conf.chandef.chan->hw_value;
 	u8 cck_txpwridx, ofdm_txpwridx;
 	int group;
@@ -4756,6 +4757,8 @@ static void rtl8xxxu_update_txpower(struct rtl8xxxu_priv *priv, int power)
 	} else {
 		ofdm_txpwridx = 0;
 	}
+	dev_info(dev, "%s: cck_txpwridx: %d\n", __func__, cck_txpwridx);
+	dev_info(dev, "%s: ofdm_txpwridx: %d\n", __func__, ofdm_txpwridx);
 
 	group = rtl8xxxu_gen1_channel_to_group(channel);
 
