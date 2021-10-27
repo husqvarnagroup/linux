@@ -416,6 +416,10 @@ static int rtl8192cu_init_phy_rf(struct rtl8xxxu_priv *priv)
 	struct rtl8xxxu_rfregval *rftable;
 	int ret;
 
+	if (rtl8xxxu_debug & RTL8XXXU_DEBUG_INIT_RF) {
+		rtl8xxxu_print_rf_regs(priv, "pre init");
+	}
+
 	if (priv->rtl_chip == RTL8188R) {
 		rftable = rtl8188ru_radioa_1t_highpa_table;
 		ret = rtl8xxxu_init_phy_rf(priv, rftable, RF_A);
@@ -429,6 +433,10 @@ static int rtl8192cu_init_phy_rf(struct rtl8xxxu_priv *priv)
 			goto exit;
 		rftable = rtl8192cu_radiob_2t_init_table;
 		ret = rtl8xxxu_init_phy_rf(priv, rftable, RF_B);
+	}
+
+	if (rtl8xxxu_debug & RTL8XXXU_DEBUG_INIT_RF) {
+		rtl8xxxu_print_rf_regs(priv, "post init");
 	}
 
 exit:

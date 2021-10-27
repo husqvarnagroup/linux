@@ -2320,6 +2320,66 @@ void rtl8xxxu_firmware_self_reset(struct rtl8xxxu_priv *priv)
 	}
 }
 
+static void rtl8xxxu_print_mac_regs(struct rtl8xxxu_priv *priv,
+				    const char *const prefix_str)
+{
+	struct device *dev = &priv->udev->dev;
+	int i;
+
+	dev_info(dev, "======= MAC REG (%s) =======\n", DRIVER_NAME);
+	for (i = 0; i < 0x800; i += 16) {
+		dev_info(dev,
+			 "MAC REG (%s) 0x%03x: 0x%08x 0x%08x 0x%08x 0x%08x",
+			 prefix_str, i, rtl8xxxu_read32(priv, i + 0),
+			 rtl8xxxu_read32(priv, i + 4),
+			 rtl8xxxu_read32(priv, i + 8),
+			 rtl8xxxu_read32(priv, i + 12));
+	}
+}
+
+static void rtl8xxxu_print_bb_regs(struct rtl8xxxu_priv *priv,
+				   const char *const prefix_str)
+{
+	struct device *dev = &priv->udev->dev;
+	int i;
+
+	dev_info(dev, "======= BB REG (%s) =======\n", DRIVER_NAME);
+	for (i = 0x800; i < 0x1000; i += 16) {
+		dev_info(dev, "BB REG (%s) 0x%03x: 0x%08x 0x%08x 0x%08x 0x%08x",
+			 prefix_str, i, rtl8xxxu_read32(priv, i + 0),
+			 rtl8xxxu_read32(priv, i + 4),
+			 rtl8xxxu_read32(priv, i + 8),
+			 rtl8xxxu_read32(priv, i + 12));
+	}
+}
+
+void rtl8xxxu_print_rf_regs(struct rtl8xxxu_priv *priv,
+			    const char *const prefix_str)
+{
+	struct device *dev = &priv->udev->dev;
+	int i, path, path_nums;
+
+	if (priv->tx_paths == 1)
+		path_nums = 1;
+	else
+		path_nums = 2;
+
+	dev_info(dev, "======== RF REG (%s) =======\n", DRIVER_NAME);
+	for (path = 0; path < path_nums; path++) {
+		dev_info(dev, "RF REG (%s) RF_Path(%x)\n", prefix_str, path);
+		for (i = 0; i < 0x100; i += 16) {
+			dev_info(
+				dev,
+				"RF REG (%s) 0x%03x: 0x%08x 0x%08x 0x%08x 0x%08x\n",
+				prefix_str, i,
+				rtl8xxxu_read_rfreg(priv, path, i),
+				rtl8xxxu_read_rfreg(priv, path, i + 4),
+				rtl8xxxu_read_rfreg(priv, path, i + 8),
+				rtl8xxxu_read_rfreg(priv, path, i + 12));
+		}
+	}
+}
+
 static int
 rtl8xxxu_init_mac(struct rtl8xxxu_priv *priv)
 {
@@ -2327,6 +2387,10 @@ rtl8xxxu_init_mac(struct rtl8xxxu_priv *priv)
 	int i, ret;
 	u16 reg;
 	u8 val;
+
+	if (rtl8xxxu_debug & RTL8XXXU_DEBUG_INIT_MAC) {
+		rtl8xxxu_print_mac_regs(priv, "pre init");
+	}
 
 	for (i = 0; ; i++) {
 		reg = array[i].reg;
@@ -2346,6 +2410,10 @@ rtl8xxxu_init_mac(struct rtl8xxxu_priv *priv)
 
 	if (priv->rtl_chip != RTL8723B && priv->rtl_chip != RTL8192E)
 		rtl8xxxu_write8(priv, REG_MAX_AGGR_NUM, 0x0a);
+
+	if (rtl8xxxu_debug & RTL8XXXU_DEBUG_INIT_MAC) {
+		rtl8xxxu_print_mac_regs(priv, "post init");
+	}
 
 	return 0;
 }
@@ -2439,6 +2507,11 @@ static int rtl8xxxu_init_phy_bb(struct rtl8xxxu_priv *priv)
 	u8 val8;
 	u32 val32;
 
+
+	if (rtl8xxxu_debug & RTL8XXXU_DEBUG_INIT_BB) {
+		rtl8xxxu_print_bb_regs(priv, "pre init");
+	}
+
 	priv->fops->init_phy_bb(priv);
 
 	if (priv->tx_paths == 1 && priv->rx_paths == 2) {
@@ -2513,6 +2586,11 @@ static int rtl8xxxu_init_phy_bb(struct rtl8xxxu_priv *priv)
 
 	if (priv->rtl_chip == RTL8192E)
 		rtl8xxxu_write32(priv, REG_AFE_XTAL_CTRL, 0x000f81fb);
+
+
+	if (rtl8xxxu_debug & RTL8XXXU_DEBUG_INIT_BB) {
+		rtl8xxxu_print_bb_regs(priv, "post init");
+	}
 
 	return 0;
 }
@@ -6803,15 +6881,17 @@ static int rtl8xxxu_debug_get_macregs(struct seq_file *m, void *v)
 {
 	struct rtl8xxxu_debugfs_priv *debugfs_priv = m->private;
 	struct rtl8xxxu_priv *priv = debugfs_priv->priv;
-	int i, j = 1;
+	int i;
 
-	seq_printf(m, "======= MAC REG =======\n");
-	for (i = 0; i < 0x800; i += 4) {
-		if (j % 4 == 1)
-			seq_printf(m, "0x%03x", i);
-		seq_printf(m, " 0x%08x ", rtl8xxxu_read32(priv, i));
-		if ((j++) % 4 == 0)
-			seq_puts(m, "\n");
+	seq_printf(m, "======= MAC REG (%s) =======\n", DRIVER_NAME);
+	for (i = 0; i < 0x800; i += 16) {
+		seq_printf(
+			m,
+			"MAC REG (debugfs) 0x%03x: 0x%08x 0x%08x 0x%08x 0x%08x\n",
+			i, rtl8xxxu_read32(priv, i + 0),
+			rtl8xxxu_read32(priv, i + 4),
+			rtl8xxxu_read32(priv, i + 8),
+			rtl8xxxu_read32(priv, i + 12));
 	}
 	return 0;
 }
@@ -6823,17 +6903,20 @@ static struct rtl8xxxu_debugfs_priv rtl8xxxu_debug_priv_macregs = {
 
 static int rtl8xxxu_debug_get_bbregs(struct seq_file *m, void *v)
 {
+
 	struct rtl8xxxu_debugfs_priv *debugfs_priv = m->private;
 	struct rtl8xxxu_priv *priv = debugfs_priv->priv;
-	int i, j = 1;
+	int i;
 
-	seq_printf(m, "======= BB REG =======\n");
-	for (i = 0x800; i < 0x1000; i += 4) {
-		if (j % 4 == 1)
-			seq_printf(m, "0x%03x", i);
-		seq_printf(m, " 0x%08x ", rtl8xxxu_read32(priv, i));
-		if ((j++) % 4 == 0)
-			seq_puts(m, "\n");
+	seq_printf(m, "======= BB REG (%s) =======\n", DRIVER_NAME);
+	for (i = 0x800; i < 0x1000; i += 16) {
+		seq_printf(
+			m,
+			"BB REG (debugfs) 0x%03x: 0x%08x 0x%08x 0x%08x 0x%08x\n",
+			i, rtl8xxxu_read32(priv, i + 0),
+			rtl8xxxu_read32(priv, i + 4),
+			rtl8xxxu_read32(priv, i + 8),
+			rtl8xxxu_read32(priv, i + 12));
 	}
 	return 0;
 }
@@ -6847,25 +6930,29 @@ static int rtl8xxxu_debug_get_rfregs(struct seq_file *m, void *v)
 {
 	struct rtl8xxxu_debugfs_priv *debugfs_priv = m->private;
 	struct rtl8xxxu_priv *priv = debugfs_priv->priv;
-	int i, j = 1, path, path_nums;
+	int i, path, path_nums;
 
 	if (priv->tx_paths == 1)
 		path_nums = 1;
 	else
 		path_nums = 2;
 
+	seq_printf(m, "======== RF REG (%s) =======\n", DRIVER_NAME);
 	for (path = 0; path < path_nums; path++) {
-		seq_printf(m, "======= RF REG =======\n");
-		seq_printf(m, "RF_Path(%x)\n", path);
-		for (i = 0; i < 0x100; i++) {
-			if (j % 4 == 1)
-				seq_printf(m, "0x%02x ", i);
-			seq_printf(m, " 0x%08x ",
-				   rtl8xxxu_read_rfreg(priv, path, i));
-			if ((j++) % 4 == 0)
-				seq_puts(m, "\n");
+		if (path_nums > 1) {
+			seq_printf(m, "RF REG (debugfs) RF_Path(%x)\n", path);
+		}
+		for (i = 0; i < 0x100; i += 16) {
+			seq_printf(
+				m,
+				"RF REG (debugfs) 0x%03x: 0x%08x 0x%08x 0x%08x 0x%08x\n",
+				i, rtl8xxxu_read_rfreg(priv, path, i),
+				rtl8xxxu_read_rfreg(priv, path, i + 4),
+				rtl8xxxu_read_rfreg(priv, path, i + 8),
+				rtl8xxxu_read_rfreg(priv, path, i + 12));
 		}
 	}
+
 	return 0;
 }
 

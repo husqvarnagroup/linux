@@ -22,6 +22,9 @@
 #define RTL8XXXU_DEBUG_ACTION		0x1000
 #define RTL8XXXU_DEBUG_EFUSE		0x2000
 #define RTL8XXXU_DEBUG_INTERRUPT	0x4000
+#define RTL8XXXU_DEBUG_INIT_MAC		0x8000
+#define RTL8XXXU_DEBUG_INIT_BB		0x10000
+#define RTL8XXXU_DEBUG_INIT_RF		0x20000
 
 #define RTW_USB_CONTROL_MSG_TIMEOUT	500
 #define RTL8XXXU_MAX_REG_POLL		500
@@ -1494,6 +1497,8 @@ int rtl8xxxu_init_phy_rf(struct rtl8xxxu_priv *priv,
 			 enum rtl8xxxu_rfpath path);
 int rtl8xxxu_init_phy_regs(struct rtl8xxxu_priv *priv,
 			   struct rtl8xxxu_reg32val *array);
+void rtl8xxxu_print_rf_regs(struct rtl8xxxu_priv *priv,
+			    const char *const prefix_str);
 int rtl8xxxu_load_firmware(struct rtl8xxxu_priv *priv, char *fw_name);
 void rtl8xxxu_firmware_self_reset(struct rtl8xxxu_priv *priv);
 void rtl8xxxu_power_off(struct rtl8xxxu_priv *priv);
