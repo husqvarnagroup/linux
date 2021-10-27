@@ -410,6 +410,8 @@
 #define REG_C2HEVT_CLEAR		0x01af
 #define REG_C2HEVT_MSG_TEST		0x01b8
 #define REG_MCUTST_1			0x01c0
+#define REG_MCUTST_2			0x01c4
+#define MCUTST_2_TOGGLE_ON_RESET	BIT(0)
 #define REG_FMTHR			0x01c8
 #define REG_HMTFR			0x01cc
 #define REG_HMBOX_0			0x01d0

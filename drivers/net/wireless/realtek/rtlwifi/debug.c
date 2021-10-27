@@ -154,6 +154,32 @@ RTL_DEBUG_IMPL_BB_SERIES(1d, 0x1d00);
 RTL_DEBUG_IMPL_BB_SERIES(1e, 0x1e00);
 RTL_DEBUG_IMPL_BB_SERIES(1f, 0x1f00);
 
+static int rtl_debug_get_rfregs(struct seq_file *m, void *v)
+{
+	struct rtl_debugfs_priv *debugfs_priv = m->private;
+	struct rtl_priv *rtlpriv = debugfs_priv->rtlpriv;
+	struct ieee80211_hw *hw = rtlpriv->hw;
+	int i;
+
+	seq_printf(m, "======== RF REG (rtl8192cu) =======\n");
+	for (i = 0; i < 0x40; i += 4) {
+		seq_printf(
+			m,
+			"RF REG (debugfs) 0x%03x: 0x%08x 0x%08x 0x%08x 0x%08x\n",
+			i, rtl_get_rfreg(hw, RF90_PATH_A, i, 0xFFFFFFFF),
+			rtl_get_rfreg(hw, RF90_PATH_A, i + 1, 0xFFFFFFFF),
+			rtl_get_rfreg(hw, RF90_PATH_A, i + 2, 0xFFFFFFFF),
+			rtl_get_rfreg(hw, RF90_PATH_A, i + 3, 0xFFFFFFFF));
+	}
+
+	return 0;
+}
+
+static struct rtl_debugfs_priv rtl_debug_priv_rfregs = {
+	.cb_read = rtl_debug_get_rfregs,
+	.cb_data = 0,
+};
+
 static int rtl_debug_get_reg_rf(struct seq_file *m, void *v)
 {
 	struct rtl_debugfs_priv *debugfs_priv = m->private;
