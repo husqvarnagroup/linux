@@ -4727,7 +4727,7 @@ static void rtl8xxxu_update_txpower(struct rtl8xxxu_priv *priv, int power)
 	struct ieee80211_hw *hw = priv->hw;
 	int channel = hw->conf.chandef.chan->hw_value;
 	u8 cck_txpwridx, ofdm_txpwridx;
-	int i, group;
+	int group;
 
 	if (!priv->fops->dbm_to_txpwridx)
 		return;
@@ -4765,8 +4765,8 @@ static void rtl8xxxu_update_txpower(struct rtl8xxxu_priv *priv, int power)
 	}
 
 	if (ofdm_txpwridx <= priv->ht40_1s_tx_power_index_A[group]) {
-		priv->ht40_1s_tx_power_index_A[i] = ofdm_txpwridx;
-		priv->ht40_1s_tx_power_index_B[i] = ofdm_txpwridx;
+		priv->ht40_1s_tx_power_index_A[group] = ofdm_txpwridx;
+		priv->ht40_1s_tx_power_index_B[group] = ofdm_txpwridx;
 	}
 
 	priv->cur_cck_txpwridx = priv->cck_tx_power_index_A[group];
