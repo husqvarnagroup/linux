@@ -2320,6 +2320,29 @@ void rtl8xxxu_firmware_self_reset(struct rtl8xxxu_priv *priv)
 	}
 }
 
+static void rtl8xxxu_print_mac(struct rtl8xxxu_priv *priv,
+			       const char *const prefix_str)
+{
+	struct rtl8xxxu_reg8val *array = priv->fops->mactable;
+	struct device *dev = &priv->udev->dev;
+	int i;
+	u16 reg;
+	u8 val, val_old;
+
+	for (i = 0; ; i++) {
+		reg = array[i].reg;
+		val = array[i].val;
+
+		if (reg == 0xffff && val == 0xff)
+			break;
+
+		val_old = rtl8xxxu_read8(priv, reg);
+
+		dev_dbg(dev, "%s: (reg: %04x, val %02x)\n",
+			prefix_str, reg, val_old);
+	}
+}
+
 static int
 rtl8xxxu_init_mac(struct rtl8xxxu_priv *priv)
 {
@@ -2327,6 +2350,10 @@ rtl8xxxu_init_mac(struct rtl8xxxu_priv *priv)
 	int i, ret;
 	u16 reg;
 	u8 val;
+
+	if (rtl8xxxu_debug & RTL8XXXU_DEBUG_INIT_MAC) {
+		rtl8xxxu_print_mac(priv, "MAC pre init");
+	}
 
 	for (i = 0; ; i++) {
 		reg = array[i].reg;
@@ -2346,6 +2373,10 @@ rtl8xxxu_init_mac(struct rtl8xxxu_priv *priv)
 
 	if (priv->rtl_chip != RTL8723B && priv->rtl_chip != RTL8192E)
 		rtl8xxxu_write8(priv, REG_MAX_AGGR_NUM, 0x0a);
+
+	if (rtl8xxxu_debug & RTL8XXXU_DEBUG_INIT_MAC) {
+		rtl8xxxu_print_mac(priv, "MAC post init");
+	}
 
 	return 0;
 }
