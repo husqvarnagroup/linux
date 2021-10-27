@@ -4768,6 +4768,10 @@ static void rtl8xxxu_update_txpower(struct rtl8xxxu_priv *priv, int power)
 	}
 
 	if (ofdm_txpwridx <= priv->ht40_1s_tx_power_index_A[group]) {
+		dev_err(dev,
+			"%s: Adjusting ht40_1s_tx_power_index_A/B "
+			"(was a bug before)\n",
+			__func__);
 		priv->ht40_1s_tx_power_index_A[group] = ofdm_txpwridx;
 		priv->ht40_1s_tx_power_index_B[group] = ofdm_txpwridx;
 	}
