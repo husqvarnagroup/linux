@@ -2366,11 +2366,11 @@ void rtl8xxxu_print_rf_regs(struct rtl8xxxu_priv *priv,
 
 	dev_info(dev, "======== RF REG (%s) =======\n", DRIVER_NAME);
 	for (path = 0; path < path_nums; path++) {
-		dev_info(dev, "BB REG (%s) RF_Path(%x)\n", prefix_str, path);
+		dev_info(dev, "RF REG (%s) RF_Path(%x)\n", prefix_str, path);
 		for (i = 0; i < 0x100; i += 16) {
 			dev_info(
 				dev,
-				"BB REG (%s) 0x%03x: 0x%08x 0x%08x 0x%08x 0x%08x\n",
+				"RF REG (%s) 0x%03x: 0x%08x 0x%08x 0x%08x 0x%08x\n",
 				prefix_str, i,
 				rtl8xxxu_read_rfreg(priv, path, i),
 				rtl8xxxu_read_rfreg(priv, path, i + 4),
@@ -6937,13 +6937,15 @@ static int rtl8xxxu_debug_get_rfregs(struct seq_file *m, void *v)
 	else
 		path_nums = 2;
 
+	seq_printf(m, "======== RF REG (%s) =======\n", DRIVER_NAME);
 	for (path = 0; path < path_nums; path++) {
-		seq_printf(m, "======== RF REG (%s) =======\n", DRIVER_NAME);
-		seq_printf(m, "BB REG (debugfs) RF_Path(%x)\n", path);
+		if (path_nums > 1) {
+			seq_printf(m, "RF REG (debugfs) RF_Path(%x)\n", path);
+		}
 		for (i = 0; i < 0x100; i += 16) {
 			seq_printf(
 				m,
-				"BB REG (debugfs) 0x%03x: 0x%08x 0x%08x 0x%08x 0x%08x\n",
+				"RF REG (debugfs) 0x%03x: 0x%08x 0x%08x 0x%08x 0x%08x\n",
 				i, rtl8xxxu_read_rfreg(priv, path, i),
 				rtl8xxxu_read_rfreg(priv, path, i + 4),
 				rtl8xxxu_read_rfreg(priv, path, i + 8),
