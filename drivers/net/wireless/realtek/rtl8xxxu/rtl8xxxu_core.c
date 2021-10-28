@@ -2364,8 +2364,8 @@ void rtl8xxxu_print_rf_regs(struct rtl8xxxu_priv *priv,
 	else
 		path_nums = 2;
 
+	dev_info(dev, "======== RF REG (%s) =======\n", DRIVER_NAME);
 	for (path = 0; path < path_nums; path++) {
-		dev_info(dev, "======== RF REG (%s) =======\n", DRIVER_NAME);
 		dev_info(dev, "BB REG (%s) RF_Path(%x)\n", prefix_str, path);
 		for (i = 0; i < 0x100; i += 16) {
 			dev_info(
