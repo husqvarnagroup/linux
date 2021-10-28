@@ -6830,7 +6830,7 @@ static int rtl8xxxu_debug_get_macregs(struct seq_file *m, void *v)
 	int i;
 
 	seq_printf(m, "======= MAC REG (%s) =======\n", DRIVER_NAME);
-	for (i = 0; i < 0x800; i += 4) {
+	for (i = 0; i < 0x800; i += 16) {
 		seq_printf(m, "0x%03x: 0x%08x  0x%08x  0x%08x  0x%08x\n", i,
 			   rtl8xxxu_read32(priv, i + 0),
 			   rtl8xxxu_read32(priv, i + 4),
