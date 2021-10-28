@@ -2328,7 +2328,7 @@ static void rtl8xxxu_print_mac(struct rtl8xxxu_priv *priv,
 
 	dev_dbg(dev, "======= MAC REG (%s) =======\n", prefix_str);
 	for (i = 0; i < 0x800; i += 16) {
-		dev_dbg(dev, "0x%03x 0x%08x  0x%08x  0x%08x  0x%08x", i,
+		dev_dbg(dev, "0x%03x: 0x%08x  0x%08x  0x%08x  0x%08x", i,
 			rtl8xxxu_read32(priv, i + 0),
 			rtl8xxxu_read32(priv, i + 4),
 			rtl8xxxu_read32(priv, i + 8),
@@ -6827,15 +6827,15 @@ static int rtl8xxxu_debug_get_macregs(struct seq_file *m, void *v)
 {
 	struct rtl8xxxu_debugfs_priv *debugfs_priv = m->private;
 	struct rtl8xxxu_priv *priv = debugfs_priv->priv;
-	int i, j = 1;
+	int i;
 
 	seq_printf(m, "======= MAC REG (%s) =======\n", DRIVER_NAME);
 	for (i = 0; i < 0x800; i += 4) {
-		if (j % 4 == 1)
-			seq_printf(m, "0x%03x:", i);
-		seq_printf(m, " 0x%08x", rtl8xxxu_read32(priv, i));
-		if ((j++) % 4 == 0)
-			seq_puts(m, "\n");
+		seq_printf(m, "0x%03x: 0x%08x  0x%08x  0x%08x  0x%08x\n", i,
+			   rtl8xxxu_read32(priv, i + 0),
+			   rtl8xxxu_read32(priv, i + 4),
+			   rtl8xxxu_read32(priv, i + 8),
+			   rtl8xxxu_read32(priv, i + 12));
 	}
 	return 0;
 }
