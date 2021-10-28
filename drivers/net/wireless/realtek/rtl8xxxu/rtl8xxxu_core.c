@@ -2324,15 +2324,14 @@ static void rtl8xxxu_print_mac(struct rtl8xxxu_priv *priv,
 			       const char *const prefix_str)
 {
 	struct device *dev = &priv->udev->dev;
-	int i, j = 1;
+	int i;
 
-	dev_dbg(dev, "MAC REG (%s) =======\n", prefix_str);
-	for (i = 0; i < 0x800; i += 4) {
-		if (j % 4 == 1)
-			dev_dbg(dev, "0x%03x", i);
-		dev_dbg(dev, " 0x%08x ", rtl8xxxu_read32(priv, i));
-		if ((j++) % 4 == 0)
-			dev_dbg(dev, "\n");
+	dev_dbg(dev, "======= MAC REG (%s) =======\n", prefix_str);
+	for (i = 0; i < 0x800 - 3; i += 4) {
+		dev_dbg(dev, "0x%03x: 0x%08x  0x%08x  0x%08x  0x%08x", i,
+			rtl8xxxu_read32(priv, i), rtl8xxxu_read32(priv, i + 1),
+			rtl8xxxu_read32(priv, i + 2),
+			rtl8xxxu_read32(priv, i + 3));
 	}
 }
 
