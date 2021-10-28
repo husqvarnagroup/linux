@@ -208,63 +208,63 @@
 
 /* Interrupt registers for 8192e/8723bu/8812 */
 #define REG_HIMR0			0x00b0
-#define	 IMR0_TXCCK			BIT(30)	/* TXRPT interrupt when CCX bit
+#define  IMR0_TXCCK			BIT(30)	/* TXRPT interrupt when CCX bit
 						   of the packet is set */
-#define	 IMR0_PSTIMEOUT			BIT(29)	/* Power Save Time Out Int */
-#define	 IMR0_GTINT4			BIT(28)	/* Set when GTIMER4 expires */
-#define	 IMR0_GTINT3			BIT(27)	/* Set when GTIMER3 expires */
-#define	 IMR0_TBDER			BIT(26)	/* Transmit Beacon0 Error */
-#define	 IMR0_TBDOK			BIT(25)	/* Transmit Beacon0 OK */
-#define	 IMR0_TSF_BIT32_TOGGLE		BIT(24)	/* TSF Timer BIT32 toggle
+#define  IMR0_PSTIMEOUT			BIT(29)	/* Power Save Time Out Int */
+#define  IMR0_GTINT4			BIT(28)	/* Set when GTIMER4 expires */
+#define  IMR0_GTINT3			BIT(27)	/* Set when GTIMER3 expires */
+#define  IMR0_TBDER			BIT(26)	/* Transmit Beacon0 Error */
+#define  IMR0_TBDOK			BIT(25)	/* Transmit Beacon0 OK */
+#define  IMR0_TSF_BIT32_TOGGLE		BIT(24)	/* TSF Timer BIT32 toggle
 						   indication interrupt */
-#define	 IMR0_BCNDMAINT0		BIT(20)	/* Beacon DMA Interrupt 0 */
-#define	 IMR0_BCNDERR0			BIT(16)	/* Beacon Queue DMA Error 0 */
-#define	 IMR0_HSISR_IND_ON_INT		BIT(15)	/* HSISR Indicator (HSIMR &
+#define  IMR0_BCNDMAINT0		BIT(20)	/* Beacon DMA Interrupt 0 */
+#define  IMR0_BCNDERR0			BIT(16)	/* Beacon Queue DMA Error 0 */
+#define  IMR0_HSISR_IND_ON_INT		BIT(15)	/* HSISR Indicator (HSIMR &
 						   HSISR is true) */
-#define	 IMR0_BCNDMAINT_E		BIT(14)	/* Beacon DMA Interrupt
+#define  IMR0_BCNDMAINT_E		BIT(14)	/* Beacon DMA Interrupt
 						   Extension for Win7 */
-#define	 IMR0_ATIMEND			BIT(12)	/* CTWidnow End or
+#define  IMR0_ATIMEND			BIT(12)	/* CTWidnow End or
 						   ATIM Window End */
-#define	 IMR0_HISR1_IND_INT		BIT(11)	/* HISR1 Indicator
+#define  IMR0_HISR1_IND_INT		BIT(11)	/* HISR1 Indicator
 						   (HISR1 & HIMR1 is true) */
-#define	 IMR0_C2HCMD			BIT(10)	/* CPU to Host Command INT
+#define  IMR0_C2HCMD			BIT(10)	/* CPU to Host Command INT
 						   Status, Write 1 to clear */
-#define	 IMR0_CPWM2			BIT(9)	/* CPU power Mode exchange INT
+#define  IMR0_CPWM2			BIT(9)	/* CPU power Mode exchange INT
 						   Status, Write 1 to clear */
-#define	 IMR0_CPWM			BIT(8)	/* CPU power Mode exchange INT
+#define  IMR0_CPWM			BIT(8)	/* CPU power Mode exchange INT
 						   Status, Write 1 to clear */
-#define	 IMR0_HIGHDOK			BIT(7)	/* High Queue DMA OK */
-#define	 IMR0_MGNTDOK			BIT(6)	/* Management Queue DMA OK */
-#define	 IMR0_BKDOK			BIT(5)	/* AC_BK DMA OK */
-#define	 IMR0_BEDOK			BIT(4)	/* AC_BE DMA OK */
-#define	 IMR0_VIDOK			BIT(3)	/* AC_VI DMA OK */
-#define	 IMR0_VODOK			BIT(2)	/* AC_VO DMA OK */
-#define	 IMR0_RDU			BIT(1)	/* Rx Descriptor Unavailable */
-#define	 IMR0_ROK			BIT(0)	/* Receive DMA OK */
+#define  IMR0_HIGHDOK			BIT(7)	/* High Queue DMA OK */
+#define  IMR0_MGNTDOK			BIT(6)	/* Management Queue DMA OK */
+#define  IMR0_BKDOK			BIT(5)	/* AC_BK DMA OK */
+#define  IMR0_BEDOK			BIT(4)	/* AC_BE DMA OK */
+#define  IMR0_VIDOK			BIT(3)	/* AC_VI DMA OK */
+#define  IMR0_VODOK			BIT(2)	/* AC_VO DMA OK */
+#define  IMR0_RDU			BIT(1)	/* Rx Descriptor Unavailable */
+#define  IMR0_ROK			BIT(0)	/* Receive DMA OK */
 #define REG_HISR0			0x00b4
 #define REG_HIMR1			0x00b8
-#define	 IMR1_BCNDMAINT7		BIT(27)	/* Beacon DMA Interrupt 7 */
-#define	 IMR1_BCNDMAINT6		BIT(26)	/* Beacon DMA Interrupt 6 */
-#define	 IMR1_BCNDMAINT5		BIT(25)	/* Beacon DMA Interrupt 5 */
-#define	 IMR1_BCNDMAINT4		BIT(24)	/* Beacon DMA Interrupt 4 */
-#define	 IMR1_BCNDMAINT3		BIT(23)	/* Beacon DMA Interrupt 3 */
-#define	 IMR1_BCNDMAINT2		BIT(22)	/* Beacon DMA Interrupt 2 */
-#define	 IMR1_BCNDMAINT1		BIT(21)	/* Beacon DMA Interrupt 1 */
-#define	 IMR1_BCNDERR7			BIT(20)	/* Beacon Queue DMA Err Int 7 */
-#define	 IMR1_BCNDERR6			BIT(19)	/* Beacon Queue DMA Err Int 6 */
-#define	 IMR1_BCNDERR5			BIT(18)	/* Beacon Queue DMA Err Int 5 */
-#define	 IMR1_BCNDERR4			BIT(17)	/* Beacon Queue DMA Err Int 4 */
-#define	 IMR1_BCNDERR3			BIT(16)	/* Beacon Queue DMA Err Int 3 */
-#define	 IMR1_BCNDERR2			BIT(15)	/* Beacon Queue DMA Err Int 2 */
-#define	 IMR1_BCNDERR1			BIT(14)	/* Beacon Queue DMA Err Int 1 */
-#define	 IMR1_ATIMEND_E			BIT(13)	/* ATIM Window End Extension
+#define  IMR1_BCNDMAINT7		BIT(27)	/* Beacon DMA Interrupt 7 */
+#define  IMR1_BCNDMAINT6		BIT(26)	/* Beacon DMA Interrupt 6 */
+#define  IMR1_BCNDMAINT5		BIT(25)	/* Beacon DMA Interrupt 5 */
+#define  IMR1_BCNDMAINT4		BIT(24)	/* Beacon DMA Interrupt 4 */
+#define  IMR1_BCNDMAINT3		BIT(23)	/* Beacon DMA Interrupt 3 */
+#define  IMR1_BCNDMAINT2		BIT(22)	/* Beacon DMA Interrupt 2 */
+#define  IMR1_BCNDMAINT1		BIT(21)	/* Beacon DMA Interrupt 1 */
+#define  IMR1_BCNDERR7			BIT(20)	/* Beacon Queue DMA Err Int 7 */
+#define  IMR1_BCNDERR6			BIT(19)	/* Beacon Queue DMA Err Int 6 */
+#define  IMR1_BCNDERR5			BIT(18)	/* Beacon Queue DMA Err Int 5 */
+#define  IMR1_BCNDERR4			BIT(17)	/* Beacon Queue DMA Err Int 4 */
+#define  IMR1_BCNDERR3			BIT(16)	/* Beacon Queue DMA Err Int 3 */
+#define  IMR1_BCNDERR2			BIT(15)	/* Beacon Queue DMA Err Int 2 */
+#define  IMR1_BCNDERR1			BIT(14)	/* Beacon Queue DMA Err Int 1 */
+#define  IMR1_ATIMEND_E			BIT(13)	/* ATIM Window End Extension
 						   for Win7 */
-#define	 IMR1_TXERR			BIT(11)	/* Tx Error Flag Int Status,
+#define  IMR1_TXERR			BIT(11)	/* Tx Error Flag Int Status,
 						   write 1 to clear */
-#define	 IMR1_RXERR			BIT(10)	/* Rx Error Flag Int Status,
+#define  IMR1_RXERR			BIT(10)	/* Rx Error Flag Int Status,
 						   write 1 to clear */
-#define	 IMR1_TXFOVW			BIT(9)	/* Transmit FIFO Overflow */
-#define	 IMR1_RXFOVW			BIT(8)	/* Receive FIFO Overflow */
+#define  IMR1_TXFOVW			BIT(9)	/* Transmit FIFO Overflow */
+#define  IMR1_RXFOVW			BIT(8)	/* Receive FIFO Overflow */
 #define REG_HISR1			0x00bc
 
 /*  Host suspend counter on FPGA platform */
@@ -315,26 +315,26 @@
 #define  SYS_CFG_CHIP_VERSION_SHIFT	12
 
 #define REG_GPIO_OUTSTS			0x00f4	/*  For RTL8723 only. */
-#define  GPIO_EFS_HCI_SEL		(BIT(0) | BIT(1))
-#define  GPIO_PAD_HCI_SEL		(BIT(2) | BIT(3))
-#define  GPIO_HCI_SEL			(BIT(4) | BIT(5))
-#define  GPIO_PKG_SEL_HCI		BIT(6)
-#define  GPIO_FEN_GPS			BIT(7)
-#define  GPIO_FEN_BT			BIT(8)
-#define  GPIO_FEN_WL			BIT(9)
-#define  GPIO_FEN_PCI			BIT(10)
-#define  GPIO_FEN_USB			BIT(11)
-#define  GPIO_BTRF_HWPDN_N		BIT(12)
-#define  GPIO_WLRF_HWPDN_N		BIT(13)
-#define  GPIO_PDN_BT_N			BIT(14)
-#define  GPIO_PDN_GPS_N			BIT(15)
-#define  GPIO_BT_CTL_HWPDN		BIT(16)
-#define  GPIO_GPS_CTL_HWPDN		BIT(17)
-#define  GPIO_PPHY_SUSB			BIT(20)
-#define  GPIO_UPHY_SUSB			BIT(21)
-#define  GPIO_PCI_SUSEN			BIT(22)
-#define  GPIO_USB_SUSEN			BIT(23)
-#define  GPIO_RF_RL_ID			(BIT(31) | BIT(30) | BIT(29) | BIT(28))
+#define  GPIO_OUTSTS_EFS_HCI_SEL	(BIT(0) | BIT(1))
+#define  GPIO_OUTSTS_PAD_HCI_SEL	(BIT(2) | BIT(3))
+#define  GPIO_OUTSTS_HCI_SEL		(BIT(4) | BIT(5))
+#define  GPIO_OUTSTS_PKG_SEL_HCI	BIT(6)
+#define  GPIO_OUTSTS_FEN_GPS		BIT(7)
+#define  GPIO_OUTSTS_FEN_BT		BIT(8)
+#define  GPIO_OUTSTS_FEN_WL		BIT(9)
+#define  GPIO_OUTSTS_FEN_PCI		BIT(10)
+#define  GPIO_OUTSTS_FEN_USB		BIT(11)
+#define  GPIO_OUTSTS_BTRF_HWPDN_N	BIT(12)
+#define  GPIO_OUTSTS_WLRF_HWPDN_N	BIT(13)
+#define  GPIO_OUTSTS_PDN_BT_N		BIT(14)
+#define  GPIO_OUTSTS_PDN_GPS_N		BIT(15)
+#define  GPIO_OUTSTS_BT_CTL_HWPDN	BIT(16)
+#define  GPIO_OUTSTS_GPS_CTL_HWPDN	BIT(17)
+#define  GPIO_OUTSTS_PPHY_SUSB		BIT(20)
+#define  GPIO_OUTSTS_UPHY_SUSB		BIT(21)
+#define  GPIO_OUTSTS_PCI_SUSEN		BIT(22)
+#define  GPIO_OUTSTS_USB_SUSEN		BIT(23)
+#define  GPIO_OUTSTS_RF_RL_ID		(BIT(31) | BIT(30) | BIT(29) | BIT(28))
 
 #define REG_SYS_CFG2			0x00fc	/* 8192eu */
 
@@ -411,7 +411,8 @@
 #define REG_C2HEVT_MSG_TEST		0x01b8
 #define REG_MCUTST_1			0x01c0
 #define REG_MCUTST_2			0x01c4
-#define MCUTST_2_TOGGLE_ON_RESET	BIT(0)
+/* Observed toggling; Unknown purpuse */
+#define  MCUTST_2_TOGGLE_ON_READ	BIT(0)
 #define REG_FMTHR			0x01c8
 #define REG_HMTFR			0x01cc
 #define REG_HMBOX_0			0x01d0
@@ -651,9 +652,16 @@
 #define REG_BCN_MAX_ERR			0x055d
 #define REG_RXTSF_OFFSET_CCK		0x055e
 #define REG_RXTSF_OFFSET_OFDM		0x055f
+
+/*
+  * Timing Sync Function Timer Register
+  * Register values increase by ~1'000'000 per second.
+  * On overflow, registers at offset +4 (REG_INIT_TSFTR, 0x056c) get increased.
+  */
 #define REG_TSFTR			0x0560
-#define REG_TSFTR1			0x0568
 #define REG_INIT_TSFTR			0x0564
+#define REG_TSFTR1			0x0568
+#define REG_TSFTR1_OVERFLOW		0x056c
 #define REG_ATIMWND_1			0x0570
 #define REG_PSTIMER			0x0580
 #define REG_TIMER0			0x0584
@@ -759,7 +767,26 @@
 #define REG_BACAMCONTENT		0x0658
 #define REG_LBDLY			0x0660
 #define REG_FWDLY			0x0661
+/* RX (error) reporting */
 #define REG_RXERR_RPT			0x0664
+#define  RXERR_RPT_COUNTER_VALUE_MASK	0x0000ffff
+#define  RXERR_RPT_RESET		BIT(27)
+#define  RXERR_RPT_CTR_TYPE_MASK	0xf0000000
+#define  RXERR_RPT_CTR_TYPE_SHIFT		28
+#define  RXERR_RPT_CTR_TYPE_OFDM_PPDU		(0 << 28)
+#define  RXERR_RPT_CTR_TYPE_OFDM_FALSE_ALARM	(1 << 28)
+#define	 RXERR_RPT_CTR_TYPE_OFDM_MPDU_OK	(2 << 28)
+#define  RXERR_RPT_CTR_TYPE_OFDM_MPDU_FAIL	(3 << 28)
+#define  RXERR_RPT_CTR_TYPE_CCK_PPDU		(4 << 28)
+#define  RXERR_RPT_CTR_TYPE_CCK_FALSE_ALARM	(5 << 28)
+#define  RXERR_RPT_CTR_TYPE_CCK_MPDU_OK		(6 << 28)
+#define  RXERR_RPT_CTR_TYPE_CCK_MPDU_FAIL	(7 << 28)
+#define  RXERR_RPT_CTR_TYPE_HT_PPDU		(8 << 28)
+#define  RXERR_RPT_CTR_TYPE_HT_FALSE_ALARM	(9 << 28)
+#define  RXERR_RPT_CTR_TYPE_HT_MPDU_TOTAL	(10 << 28)
+#define  RXERR_RPT_CTR_TYPE_HT_MPDU_OK		(11 << 28)
+#define  RXERR_RPT_CTR_TYPE_HT_MPDU_FAIL	(12 << 28)
+#define  RXERR_RPT_CTR_TYPE_RX_FULL_DROP	(15 << 28)
 #define REG_WMAC_TRXPTCL_CTL		0x0668
 #define  WMAC_TRXPTCL_CTL_BW_MASK	(BIT(7) | BIT(8))
 #define  WMAC_TRXPTCL_CTL_BW_20		0
@@ -842,8 +869,9 @@
 #define REG_FPGA0_RF_TIMING1		0x0810
 #define REG_FPGA0_RF_TIMING2		0x0814
 #define REG_FPGA0_POWER_SAVE		0x0818
-#define  FPGA0_PS_LOWER_CHANNEL		BIT(26)
-#define  FPGA0_PS_UPPER_CHANNEL		BIT(27)
+#define  FPGA0_POWER_SAVE_LOWER_CHANNEL	BIT(26)
+#define  FPGA0_POWER_SAVE_UPPER_CHANNEL	BIT(27)
+#define  FPGA0_POWER_SAVE_ENABLE	BIT(28)
 
 #define REG_FPGA0_XA_HSSI_PARM1		0x0820	/* RF 3 wire register */
 #define  FPGA0_HSSI_PARM1_PI		BIT(8)
@@ -863,10 +891,13 @@
 #define REG_TX_AGC_B_MCS03_MCS00	0x083c
 
 #define REG_FPGA0_XA_LSSI_PARM		0x0840
+#define  FPGA0_XA_LSSI_PARM_ADDR_SHIFT	20
+#define  FPGA0_XA_LSSI_PARM_ADDR_MASK	0x0ff00000
+#define  FPGA0_XA_LSSI_PARM_DATA_MASK	0x000fffff
 #define REG_FPGA0_XB_LSSI_PARM		0x0844
-#define  FPGA0_LSSI_PARM_ADDR_SHIFT	20
-#define  FPGA0_LSSI_PARM_ADDR_MASK	0x0ff00000
-#define  FPGA0_LSSI_PARM_DATA_MASK	0x000fffff
+#define  FPGA0_XB_LSSI_PARM_ADDR_SHIFT	20
+#define  FPGA0_XB_LSSI_PARM_ADDR_MASK	0x0ff00000
+#define  FPGA0_XB_LSSI_PARM_DATA_MASK	0x000fffff
 
 #define REG_TX_AGC_B_MCS07_MCS04	0x0848
 #define REG_TX_AGC_B_MCS11_MCS08	0x084c

@@ -957,8 +957,8 @@ int rtl8xxxu_write_rfreg(struct rtl8xxxu_priv *priv,
 		dev_info(&priv->udev->dev, "%s(%02x) = 0x%06x\n",
 			 __func__, reg, data);
 
-	data &= FPGA0_LSSI_PARM_DATA_MASK;
-	dataaddr = (reg << FPGA0_LSSI_PARM_ADDR_SHIFT) | data;
+	data &= FPGA0_XA_LSSI_PARM_DATA_MASK;
+	dataaddr = (reg << FPGA0_XA_LSSI_PARM_ADDR_SHIFT) | data;
 
 	if (priv->rtl_chip == RTL8192E) {
 		val32 = rtl8xxxu_read32(priv, REG_FPGA0_POWER_SAVE);
