@@ -2323,23 +2323,16 @@ void rtl8xxxu_firmware_self_reset(struct rtl8xxxu_priv *priv)
 static void rtl8xxxu_print_mac(struct rtl8xxxu_priv *priv,
 			       const char *const prefix_str)
 {
-	struct rtl8xxxu_reg8val *array = priv->fops->mactable;
 	struct device *dev = &priv->udev->dev;
-	int i;
-	u16 reg;
-	u8 val, val_old;
+	int i, j = 1;
 
-	for (i = 0; ; i++) {
-		reg = array[i].reg;
-		val = array[i].val;
-
-		if (reg == 0xffff && val == 0xff)
-			break;
-
-		val_old = rtl8xxxu_read8(priv, reg);
-
-		dev_dbg(dev, "%s: (reg: %04x, val %02x)\n",
-			prefix_str, reg, val_old);
+	dev_dbg(dev, "MAC REG (%s) =======\n", prefix_str);
+	for (i = 0; i < 0x800; i += 4) {
+		if (j % 4 == 1)
+			dev_dbg(dev, "0x%03x", i);
+		dev_dbg(dev, " 0x%08x ", rtl8xxxu_read32(priv, i));
+		if ((j++) % 4 == 0)
+			dev_dbg(dev, "\n");
 	}
 }
 
@@ -2352,7 +2345,7 @@ rtl8xxxu_init_mac(struct rtl8xxxu_priv *priv)
 	u8 val;
 
 	if (rtl8xxxu_debug & RTL8XXXU_DEBUG_INIT_MAC) {
-		rtl8xxxu_print_mac(priv, "MAC pre init");
+		rtl8xxxu_print_mac(priv, "pre init");
 	}
 
 	for (i = 0; ; i++) {
@@ -2375,7 +2368,7 @@ rtl8xxxu_init_mac(struct rtl8xxxu_priv *priv)
 		rtl8xxxu_write8(priv, REG_MAX_AGGR_NUM, 0x0a);
 
 	if (rtl8xxxu_debug & RTL8XXXU_DEBUG_INIT_MAC) {
-		rtl8xxxu_print_mac(priv, "MAC post init");
+		rtl8xxxu_print_mac(priv, "post init");
 	}
 
 	return 0;
@@ -6836,7 +6829,7 @@ static int rtl8xxxu_debug_get_macregs(struct seq_file *m, void *v)
 	struct rtl8xxxu_priv *priv = debugfs_priv->priv;
 	int i, j = 1;
 
-	seq_printf(m, "======= MAC REG =======\n");
+	seq_printf(m, "======= MAC REG (%s) =======\n", DRIVER_NAME);
 	for (i = 0; i < 0x800; i += 4) {
 		if (j % 4 == 1)
 			seq_printf(m, "0x%03x", i);
