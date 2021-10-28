@@ -651,9 +651,15 @@
 #define REG_BCN_MAX_ERR			0x055d
 #define REG_RXTSF_OFFSET_CCK		0x055e
 #define REG_RXTSF_OFFSET_OFDM		0x055f
+
+/*
+  * Timing Sync Function Timer Register
+  * Register values increase by ~1'000'000 per second.
+  * On overflow, registers at offset +4 (REG_INIT_TSFTR, 0x056c) get increased.
+  */
 #define REG_TSFTR			0x0560
-#define REG_TSFTR1			0x0568
 #define REG_INIT_TSFTR			0x0564
+#define REG_TSFTR1			0x0568
 #define REG_ATIMWND_1			0x0570
 #define REG_PSTIMER			0x0580
 #define REG_TIMER0			0x0584
