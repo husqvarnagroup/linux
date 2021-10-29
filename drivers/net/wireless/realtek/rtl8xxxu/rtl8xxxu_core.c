@@ -1959,7 +1959,6 @@ rtl8xxxu_read_efuse8(struct rtl8xxxu_priv *priv, u16 offset, u8 *data)
 	rtl8xxxu_write8(priv, REG_EFUSE_CTRL + 3, val8 & 0x7f);
 
 	/* Poll for data read */
-	val32 = rtl8xxxu_read32(priv, REG_EFUSE_CTRL);
 	for (i = 0; i < RTL8XXXU_MAX_REG_POLL; i++) {
 		val32 = rtl8xxxu_read32(priv, REG_EFUSE_CTRL);
 		if (val32 & BIT(31))
