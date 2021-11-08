@@ -1077,6 +1077,9 @@ int rtl_usb_probe(struct usb_interface *intf,
 	}
 	rtlpriv->mac80211.mac80211_registered = 1;
 
+	/* add for debug */
+	rtl_debug_add_one(hw);
+
 	set_bit(RTL_STATUS_INTERFACE_START, &rtlpriv->status);
 	return 0;
 
@@ -1104,6 +1107,10 @@ void rtl_usb_disconnect(struct usb_interface *intf)
 	/* just in case driver is removed before firmware callback */
 	wait_for_completion(&rtlpriv->firmware_loading_complete);
 	clear_bit(RTL_STATUS_INTERFACE_START, &rtlpriv->status);
+
+	/* remove debugging interface */
+	rtl_debug_remove_one(hw);
+
 	/*ieee80211_unregister_hw will call ops_stop */
 	if (rtlmac->mac80211_registered == 1) {
 		ieee80211_unregister_hw(hw);
