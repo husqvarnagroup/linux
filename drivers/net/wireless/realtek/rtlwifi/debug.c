@@ -50,8 +50,6 @@ struct rtl_debugfs_priv {
 	u32 cb_data;
 };
 
-static struct dentry *debugfs_topdir;
-
 static int rtl_debug_get_common(struct seq_file *m, void *v)
 {
 	struct rtl_debugfs_priv *debugfs_priv = m->private;
@@ -69,6 +67,31 @@ static const struct file_operations file_ops_common = {
 	.read = seq_read,
 	.llseek = seq_lseek,
 	.release = single_release,
+};
+
+static int rtl_debug_get_macregs(struct seq_file *m, void *v)
+{
+	struct rtl_debugfs_priv *debugfs_priv = m->private;
+	struct rtl_priv *rtlpriv = debugfs_priv->rtlpriv;
+	int i;
+
+	seq_printf(m, "======= MAC REG (rtl8192cu) =======\n");
+	for (i = 0; i < 0x800; i += 16) {
+		seq_printf(
+			m,
+			"MAC REG (debugfs) 0x%03x: 0x%08x 0x%08x 0x%08x 0x%08x\n",
+			i, rtl_read_dword(rtlpriv, i + 0),
+			rtl_read_dword(rtlpriv, i + 4),
+			rtl_read_dword(rtlpriv, i + 8),
+			rtl_read_dword(rtlpriv, i + 12));
+	}
+	return 0;
+}
+
+static struct rtl_debugfs_priv rtl_debug_priv_macregs = {
+	.cb_read = rtl_debug_get_macregs,
+	.cb_write = 0,
+	.cb_data = 0,
 };
 
 static int rtl_debug_get_mac_page(struct seq_file *m, void *v)
@@ -111,6 +134,30 @@ RTL_DEBUG_IMPL_MAC_SERIES(14, 0x1400);
 RTL_DEBUG_IMPL_MAC_SERIES(15, 0x1500);
 RTL_DEBUG_IMPL_MAC_SERIES(16, 0x1600);
 RTL_DEBUG_IMPL_MAC_SERIES(17, 0x1700);
+
+static int rtl_debug_get_bbregs(struct seq_file *m, void *v)
+{
+	struct rtl_debugfs_priv *debugfs_priv = m->private;
+	struct rtl_priv *rtlpriv = debugfs_priv->rtlpriv;
+	int i;
+
+	seq_printf(m, "======= BB REG (rtl8192cu) =======\n");
+	for (i = 0x800; i < 0x1000; i += 16) {
+		seq_printf(
+			m,
+			"BB REG (debugfs) 0x%03x: 0x%08x 0x%08x 0x%08x 0x%08x\n",
+			i, rtl_read_dword(rtlpriv, i + 0),
+			rtl_read_dword(rtlpriv, i + 4),
+			rtl_read_dword(rtlpriv, i + 8),
+			rtl_read_dword(rtlpriv, i + 12));
+	}
+	return 0;
+}
+
+static struct rtl_debugfs_priv rtl_debug_priv_bbregs = {
+	.cb_read = rtl_debug_get_bbregs,
+	.cb_data = 0,
+};
 
 static int rtl_debug_get_bb_page(struct seq_file *m, void *v)
 {
@@ -166,7 +213,8 @@ static int rtl_debug_get_rfregs(struct seq_file *m, void *v)
 		seq_printf(
 			m,
 			"RF REG (debugfs) 0x%03x: 0x%08x 0x%08x 0x%08x 0x%08x\n",
-			i, rtl_get_rfreg(hw, RF90_PATH_A, i, 0xFFFFFFFF),
+			i,
+      rtl_get_rfreg(hw, RF90_PATH_A, i, 0xFFFFFFFF),
 			rtl_get_rfreg(hw, RF90_PATH_A, i + 1, 0xFFFFFFFF),
 			rtl_get_rfreg(hw, RF90_PATH_A, i + 2, 0xFFFFFFFF),
 			rtl_get_rfreg(hw, RF90_PATH_A, i + 3, 0xFFFFFFFF));
@@ -464,10 +512,21 @@ void rtl_debug_add_one(struct ieee80211_hw *hw)
 	struct rtl_efuse *rtlefuse = rtl_efuse(rtl_priv(hw));
 	struct dentry *parent;
 
-	snprintf(rtlpriv->dbg.debugfs_name, 18, "%pMF", rtlefuse->dev_addr);
-
 	rtlpriv->dbg.debugfs_dir =
-		debugfs_create_dir(rtlpriv->dbg.debugfs_name, debugfs_topdir);
+		debugfs_create_dir("rtl8192cu", rtlpriv->hw->wiphy->debugfsdir);
+
+	rtl_debug_priv_macregs.rtlpriv = rtlpriv;
+	debugfs_create_file("mac_reg_dump", S_IFREG | 0444,
+			    rtlpriv->dbg.debugfs_dir, &rtl_debug_priv_macregs,
+			    &file_ops_common);
+	rtl_debug_priv_bbregs.rtlpriv = rtlpriv;
+	debugfs_create_file("bb_reg_dump", S_IFREG | 0444,
+			    rtlpriv->dbg.debugfs_dir, &rtl_debug_priv_bbregs,
+			    &file_ops_common);
+	rtl_debug_priv_rfregs.rtlpriv = rtlpriv;
+	debugfs_create_file("rf_reg_dump", S_IFREG | 0444,
+			    rtlpriv->dbg.debugfs_dir, &rtl_debug_priv_rfregs,
+			    &file_ops_common);
 
 	parent = rtlpriv->dbg.debugfs_dir;
 
@@ -526,15 +585,5 @@ void rtl_debug_remove_one(struct ieee80211_hw *hw)
 	rtlpriv->dbg.debugfs_dir = NULL;
 }
 EXPORT_SYMBOL_GPL(rtl_debug_remove_one);
-
-void rtl_debugfs_add_topdir(void)
-{
-	debugfs_topdir = debugfs_create_dir("rtlwifi", NULL);
-}
-
-void rtl_debugfs_remove_topdir(void)
-{
-	debugfs_remove_recursive(debugfs_topdir);
-}
 
 #endif
