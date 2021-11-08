@@ -692,14 +692,14 @@ static void rtl8192eu_init_phy_bb(struct rtl8xxxu_priv *priv)
 	rtl8xxxu_write16(priv, REG_SYS_FUNC, val16);
 
 	/* 6. 0x1f[7:0] = 0x07 */
-	val8 = RF_ENABLE | RF_RSTB | RF_SDMRSTB;
+	val8 = RF_CTRL_ENABLE | RF_CTRL_RSTB | RF_CTRL_SDMRSTB;
 	rtl8xxxu_write8(priv, REG_RF_CTRL, val8);
 
 	val16 = rtl8xxxu_read16(priv, REG_SYS_FUNC);
 	val16 |= (SYS_FUNC_USBA | SYS_FUNC_USBD | SYS_FUNC_DIO_RF |
 		  SYS_FUNC_BB_GLB_RSTN | SYS_FUNC_BBRSTB);
 	rtl8xxxu_write16(priv, REG_SYS_FUNC, val16);
-	val8 = RF_ENABLE | RF_RSTB | RF_SDMRSTB;
+	val8 = RF_CTRL_ENABLE | RF_CTRL_RSTB | RF_CTRL_SDMRSTB;
 	rtl8xxxu_write8(priv, REG_RF_CTRL, val8);
 	rtl8xxxu_init_phy_regs(priv, rtl8192eu_phy_init_table);
 
@@ -1504,7 +1504,7 @@ static int rtl8192eu_active_to_emu(struct rtl8xxxu_priv *priv)
 
 	/* Turn off RF */
 	val8 = rtl8xxxu_read8(priv, REG_RF_CTRL);
-	val8 &= ~RF_ENABLE;
+	val8 &= ~RF_CTRL_ENABLE;
 	rtl8xxxu_write8(priv, REG_RF_CTRL, val8);
 
 	/* Switch DPDT_SEL_P output from register 0x65[2] */

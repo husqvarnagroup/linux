@@ -1310,11 +1310,12 @@ void rtl8xxxu_gen1_config_channel(struct ieee80211_hw *hw)
 		rtl8xxxu_write32(priv, REG_FPGA0_ANALOG2, val32);
 
 		val32 = rtl8xxxu_read32(priv, REG_FPGA0_POWER_SAVE);
-		val32 &= ~(FPGA0_PS_LOWER_CHANNEL | FPGA0_PS_UPPER_CHANNEL);
+		val32 &= ~(FPGA0_POWER_SAVE_LOWER_CHANNEL |
+			   FPGA0_POWER_SAVE_UPPER_CHANNEL);
 		if (sec_ch_above)
-			val32 |= FPGA0_PS_UPPER_CHANNEL;
+			val32 |= FPGA0_POWER_SAVE_UPPER_CHANNEL;
 		else
-			val32 |= FPGA0_PS_LOWER_CHANNEL;
+			val32 |= FPGA0_POWER_SAVE_LOWER_CHANNEL;
 		rtl8xxxu_write32(priv, REG_FPGA0_POWER_SAVE, val32);
 		break;
 
@@ -1427,11 +1428,12 @@ void rtl8xxxu_gen2_config_channel(struct ieee80211_hw *hw)
 		rtl8xxxu_write32(priv, REG_OFDM1_LSTF, val32);
 
 		val32 = rtl8xxxu_read32(priv, REG_FPGA0_POWER_SAVE);
-		val32 &= ~(FPGA0_PS_LOWER_CHANNEL | FPGA0_PS_UPPER_CHANNEL);
+		val32 &= ~(FPGA0_POWER_SAVE_LOWER_CHANNEL |
+			   FPGA0_POWER_SAVE_UPPER_CHANNEL);
 		if (sec_ch_above)
-			val32 |= FPGA0_PS_UPPER_CHANNEL;
+			val32 |= FPGA0_POWER_SAVE_UPPER_CHANNEL;
 		else
-			val32 |= FPGA0_PS_LOWER_CHANNEL;
+			val32 |= FPGA0_POWER_SAVE_LOWER_CHANNEL;
 		rtl8xxxu_write32(priv, REG_FPGA0_POWER_SAVE, val32);
 		break;
 	case NL80211_CHAN_WIDTH_80:
@@ -2002,8 +2004,8 @@ static int rtl8xxxu_read_efuse(struct rtl8xxxu_priv *priv)
 
 	/*  1.2V Power: From VDDON with Power Cut(0x0000[15]), default valid */
 	val16 = rtl8xxxu_read16(priv, REG_SYS_ISO_CTRL);
-	if (!(val16 & SYS_ISO_PWC_EV12V)) {
-		val16 |= SYS_ISO_PWC_EV12V;
+	if (!(val16 & SYS_ISO_CTRL_PWC_EV12V)) {
+		val16 |= SYS_ISO_CTRL_PWC_EV12V;
 		rtl8xxxu_write16(priv, REG_SYS_ISO_CTRL, val16);
 	}
 	/*  Reset: 0x0000[28], default valid */
@@ -2451,7 +2453,7 @@ void rtl8xxxu_gen1_init_phy_bb(struct rtl8xxxu_priv *priv)
 
 	val8 = rtl8xxxu_read8(priv, REG_AFE_PLL_CTRL);
 	udelay(2);
-	val8 |= AFE_PLL_320_ENABLE;
+	val8 |= AFE_PLL_CTRL_320_ENABLE;
 	rtl8xxxu_write8(priv, REG_AFE_PLL_CTRL, val8);
 	udelay(2);
 
@@ -2463,13 +2465,13 @@ void rtl8xxxu_gen1_init_phy_bb(struct rtl8xxxu_priv *priv)
 	rtl8xxxu_write16(priv, REG_SYS_FUNC, val16);
 
 	val32 = rtl8xxxu_read32(priv, REG_AFE_XTAL_CTRL);
-	val32 &= ~AFE_XTAL_RF_GATE;
+	val32 &= ~AFE_XTAL_CTRL_RF_GATE;
 	if (priv->has_bluetooth)
-		val32 &= ~AFE_XTAL_BT_GATE;
+		val32 &= ~AFE_XTAL_CTRL_BT_GATE;
 	rtl8xxxu_write32(priv, REG_AFE_XTAL_CTRL, val32);
 
 	/* 6. 0x1f[7:0] = 0x07 */
-	val8 = RF_ENABLE | RF_RSTB | RF_SDMRSTB;
+	val8 = RF_CTRL_ENABLE | RF_CTRL_RSTB | RF_CTRL_SDMRSTB;
 	rtl8xxxu_write8(priv, REG_RF_CTRL, val8);
 
 	if (priv->hi_pa)
@@ -2490,8 +2492,8 @@ void rtl8xxxu_gen1_init_phy_bb(struct rtl8xxxu_priv *priv)
 	else
 		rtl8xxxu_init_phy_regs(priv, rtl8xxx_agc_standard_table);
 
-	ldoa15 = LDOA15_ENABLE | LDOA15_OBUF;
-	ldov12d = LDOV12D_ENABLE | BIT(2) | (2 << LDOV12D_VADJ_SHIFT);
+	ldoa15 = LDOA15_CTRL_ENABLE | LDOA15_CTRL_OBUF;
+	ldov12d = LDOV12D_CTRL_ENABLE | BIT(2) | (2 << LDOV12D_CTRL_VADJ_SHIFT);
 	ldohci12 = 0x57;
 	lpldo = 1;
 	val32 = (lpldo << 24) | (ldohci12 << 16) | (ldov12d << 8) | ldoa15;
@@ -2797,11 +2799,11 @@ static int rtl8xxxu_init_queue_priority(struct rtl8xxxu_priv *priv)
 	switch (priv->ep_tx_count) {
 	case 1:
 		if (priv->ep_tx_high_queue) {
-			hi = TRXDMA_QUEUE_HIGH;
+			hi = TRXDMA_CTRL_QUEUE_HIGH;
 		} else if (priv->ep_tx_low_queue) {
-			hi = TRXDMA_QUEUE_LOW;
+			hi = TRXDMA_CTRL_QUEUE_LOW;
 		} else if (priv->ep_tx_normal_queue) {
-			hi = TRXDMA_QUEUE_NORMAL;
+			hi = TRXDMA_CTRL_QUEUE_NORMAL;
 		} else {
 			hi = 0;
 			ret = -EINVAL;
@@ -2823,14 +2825,14 @@ static int rtl8xxxu_init_queue_priority(struct rtl8xxxu_priv *priv)
 		break;
 	case 2:
 		if (priv->ep_tx_high_queue && priv->ep_tx_low_queue) {
-			hi = TRXDMA_QUEUE_HIGH;
-			lo = TRXDMA_QUEUE_LOW;
+			hi = TRXDMA_CTRL_QUEUE_HIGH;
+			lo = TRXDMA_CTRL_QUEUE_LOW;
 		} else if (priv->ep_tx_normal_queue && priv->ep_tx_low_queue) {
-			hi = TRXDMA_QUEUE_NORMAL;
-			lo = TRXDMA_QUEUE_LOW;
+			hi = TRXDMA_CTRL_QUEUE_NORMAL;
+			lo = TRXDMA_CTRL_QUEUE_LOW;
 		} else if (priv->ep_tx_high_queue && priv->ep_tx_normal_queue) {
-			hi = TRXDMA_QUEUE_HIGH;
-			lo = TRXDMA_QUEUE_NORMAL;
+			hi = TRXDMA_CTRL_QUEUE_HIGH;
+			lo = TRXDMA_CTRL_QUEUE_NORMAL;
 		} else {
 			ret = -EINVAL;
 			hi = 0;
@@ -2852,12 +2854,12 @@ static int rtl8xxxu_init_queue_priority(struct rtl8xxxu_priv *priv)
 		vop = 0;
 		break;
 	case 3:
-		beq = TRXDMA_QUEUE_LOW;
-		bkq = TRXDMA_QUEUE_LOW;
-		viq = TRXDMA_QUEUE_NORMAL;
-		voq = TRXDMA_QUEUE_HIGH;
-		mgq = TRXDMA_QUEUE_HIGH;
-		hiq = TRXDMA_QUEUE_HIGH;
+		beq = TRXDMA_CTRL_QUEUE_LOW;
+		bkq = TRXDMA_CTRL_QUEUE_LOW;
+		viq = TRXDMA_CTRL_QUEUE_NORMAL;
+		voq = TRXDMA_CTRL_QUEUE_HIGH;
+		mgq = TRXDMA_CTRL_QUEUE_HIGH;
+		hiq = TRXDMA_CTRL_QUEUE_HIGH;
 
 		hip = hiq ^ 3;
 		mgp = mgq ^ 3;
@@ -3840,12 +3842,12 @@ static int rtl8xxxu_active_to_emu(struct rtl8xxxu_priv *priv)
 
 	/* 0x0000[5] = 1 analog Ips to digital, 1:isolation */
 	val8 = rtl8xxxu_read8(priv, REG_SYS_ISO_CTRL);
-	val8 |= SYS_ISO_ANALOG_IPS;
+	val8 |= SYS_ISO_CTRL_ANALOG_IPS;
 	rtl8xxxu_write8(priv, REG_SYS_ISO_CTRL, val8);
 
 	/* 0x0020[0] = 0 disable LDOA12 MACRO block*/
 	val8 = rtl8xxxu_read8(priv, REG_LDOA15_CTRL);
-	val8 &= ~LDOA15_ENABLE;
+	val8 &= ~LDOA15_CTRL_ENABLE;
 	rtl8xxxu_write8(priv, REG_LDOA15_CTRL, val8);
 
 exit:

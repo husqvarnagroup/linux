@@ -469,15 +469,15 @@ static int rtl8192cu_power_on(struct rtl8xxxu_priv *priv)
 	udelay(100);
 
 	val8 = rtl8xxxu_read8(priv, REG_LDOV12D_CTRL);
-	if (!(val8 & LDOV12D_ENABLE)) {
+	if (!(val8 & LDOV12D_CTRL_ENABLE)) {
 		pr_info("%s: Enabling LDOV12D (%02x)\n", __func__, val8);
-		val8 |= LDOV12D_ENABLE;
+		val8 |= LDOV12D_CTRL_ENABLE;
 		rtl8xxxu_write8(priv, REG_LDOV12D_CTRL, val8);
 
 		udelay(100);
 
 		val8 = rtl8xxxu_read8(priv, REG_SYS_ISO_CTRL);
-		val8 &= ~SYS_ISO_MD2PP;
+		val8 &= ~SYS_ISO_CTRL_MD2PP;
 		rtl8xxxu_write8(priv, REG_SYS_ISO_CTRL, val8);
 	}
 
@@ -509,7 +509,7 @@ static int rtl8192cu_power_on(struct rtl8xxxu_priv *priv)
 	 * Release RF digital isolation
 	 */
 	val16 = rtl8xxxu_read16(priv, REG_SYS_ISO_CTRL);
-	val16 &= ~SYS_ISO_DIOR;
+	val16 &= ~SYS_ISO_CTRL_DIOR;
 	rtl8xxxu_write16(priv, REG_SYS_ISO_CTRL, val16);
 
 	val8 = rtl8xxxu_read8(priv, REG_APSD_CTRL);

@@ -491,7 +491,7 @@ static void rtl8723bu_init_phy_bb(struct rtl8xxxu_priv *priv)
 	rtl8xxxu_write32(priv, REG_S0S1_PATH_SWITCH, 0x00);
 
 	/* 6. 0x1f[7:0] = 0x07 */
-	val8 = RF_ENABLE | RF_RSTB | RF_SDMRSTB;
+	val8 = RF_CTRL_ENABLE | RF_CTRL_RSTB | RF_CTRL_SDMRSTB;
 	rtl8xxxu_write8(priv, REG_RF_CTRL, val8);
 
 	/* Why? */
@@ -1253,12 +1253,12 @@ static int rtl8723bu_active_to_emu(struct rtl8xxxu_priv *priv)
 
 	/* 0x0000[5] = 1 analog Ips to digital, 1:isolation */
 	val8 = rtl8xxxu_read8(priv, REG_SYS_ISO_CTRL);
-	val8 |= SYS_ISO_ANALOG_IPS;
+	val8 |= SYS_ISO_CTRL_ANALOG_IPS;
 	rtl8xxxu_write8(priv, REG_SYS_ISO_CTRL, val8);
 
 	/* 0x0020[0] = 0 disable LDOA12 MACRO block*/
 	val8 = rtl8xxxu_read8(priv, REG_LDOA15_CTRL);
-	val8 &= ~LDOA15_ENABLE;
+	val8 &= ~LDOA15_CTRL_ENABLE;
 	rtl8xxxu_write8(priv, REG_LDOA15_CTRL, val8);
 
 exit:
@@ -1273,7 +1273,7 @@ static int rtl8723b_emu_to_active(struct rtl8xxxu_priv *priv)
 
 	/* 0x20[0] = 1 enable LDOA12 MACRO block for all interface */
 	val8 = rtl8xxxu_read8(priv, REG_LDOA15_CTRL);
-	val8 |= LDOA15_ENABLE;
+	val8 |= LDOA15_CTRL_ENABLE;
 	rtl8xxxu_write8(priv, REG_LDOA15_CTRL, val8);
 
 	/* 0x67[0] = 0 to disable BT_GPS_SEL pins*/
@@ -1285,7 +1285,7 @@ static int rtl8723b_emu_to_active(struct rtl8xxxu_priv *priv)
 
 	/* 0x00[5] = 0 release analog Ips to digital, 1:isolation */
 	val8 = rtl8xxxu_read8(priv, REG_SYS_ISO_CTRL);
-	val8 &= ~SYS_ISO_ANALOG_IPS;
+	val8 &= ~SYS_ISO_CTRL_ANALOG_IPS;
 	rtl8xxxu_write8(priv, REG_SYS_ISO_CTRL, val8);
 
 	/* Disable SW LPS 0x04[10]= 0 */
