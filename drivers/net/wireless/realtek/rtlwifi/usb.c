@@ -1077,6 +1077,9 @@ int rtl_usb_probe(struct usb_interface *intf,
 	}
 	rtlpriv->mac80211.mac80211_registered = 1;
 
+	/* add for debug */
+	rtl_debug_add_one(hw);
+
 	set_bit(RTL_STATUS_INTERFACE_START, &rtlpriv->status);
 	return 0;
 
