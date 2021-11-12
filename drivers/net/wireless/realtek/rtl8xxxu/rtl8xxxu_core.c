@@ -2493,8 +2493,8 @@ void rtl8xxxu_gen1_init_phy_bb(struct rtl8xxxu_priv *priv)
 		rtl8xxxu_init_phy_regs(priv, rtl8xxx_agc_standard_table);
 
 	ldoa15 = LDOA15_CTRL_ENABLE | LDOA15_CTRL_OBUF;
-	ldov12d = LDOV12D_CTRL_ENABLE | BIT(2) | (2 << LDOV12D_CTRL_VADJ_SHIFT);
-	ldohci12 = 0x57;
+	ldov12d = 0x55;
+	ldohci12 = 0x0F;
 	lpldo = 1;
 	val32 = (lpldo << 24) | (ldohci12 << 16) | (ldov12d << 8) | ldoa15;
 	rtl8xxxu_write32(priv, REG_LDOA15_CTRL, val32);
