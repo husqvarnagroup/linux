@@ -4466,9 +4466,8 @@ static int rtl8xxxu_init_device(struct ieee80211_hw *hw)
 	else
 		rtl8xxxu_write_rfreg(priv, RF_A, RF6052_REG_T_METER, 0x60);
 
-	/* Set NAV_UPPER to 30000us */
-	val8 = ((30000 + NAV_UPPER_UNIT - 1) / NAV_UPPER_UNIT);
-	rtl8xxxu_write8(priv, REG_NAV_UPPER, val8);
+	/* Meaning of zero is unknown, but 8192cu set this register to zero */
+	rtl8xxxu_write8(priv, REG_NAV_UPPER, 0);
 
 	if (priv->rtl_chip == RTL8723A) {
 		/*
