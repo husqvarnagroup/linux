@@ -1335,8 +1335,8 @@ void rtl8xxxu_gen1_config_channel(struct ieee80211_hw *hw)
 	else
 		val8 = 0x0a;
 
-	rtl8xxxu_write8(priv, REG_SIFS_CCK + 1, val8);
-	rtl8xxxu_write8(priv, REG_SIFS_OFDM + 1, val8);
+//	rtl8xxxu_write8(priv, REG_SIFS_CCK + 1, val8);
+//	rtl8xxxu_write8(priv, REG_SIFS_OFDM + 1, val8);
 
 	rtl8xxxu_write16(priv, REG_R2T_SIFS, 0x0808);
 	rtl8xxxu_write16(priv, REG_T2T_SIFS, 0x0a0a);
@@ -1458,8 +1458,8 @@ void rtl8xxxu_gen2_config_channel(struct ieee80211_hw *hw)
 	else
 		val8 = 0x0a;
 
-	rtl8xxxu_write8(priv, REG_SIFS_CCK + 1, val8);
-	rtl8xxxu_write8(priv, REG_SIFS_OFDM + 1, val8);
+//	rtl8xxxu_write8(priv, REG_SIFS_CCK + 1, val8);
+//	rtl8xxxu_write8(priv, REG_SIFS_OFDM + 1, val8);
 
 	rtl8xxxu_write16(priv, REG_R2T_SIFS, 0x0808);
 	rtl8xxxu_write16(priv, REG_T2T_SIFS, 0x0a0a);
@@ -1745,8 +1745,8 @@ rtl8xxxu_set_spec_sifs(struct rtl8xxxu_priv *priv, u16 cck, u16 ofdm)
 {
 	u16 val16;
 
-	val16 = ((cck << SPEC_SIFS_CCK_SHIFT) & SPEC_SIFS_CCK_MASK) |
-		((ofdm << SPEC_SIFS_OFDM_SHIFT) & SPEC_SIFS_OFDM_MASK);
+	val16 = ((0xA << SPEC_SIFS_CCK_SHIFT) & SPEC_SIFS_CCK_MASK) |
+		((0x10 << SPEC_SIFS_OFDM_SHIFT) & SPEC_SIFS_OFDM_MASK);
 
 	rtl8xxxu_write16(priv, REG_SPEC_SIFS, val16);
 }
