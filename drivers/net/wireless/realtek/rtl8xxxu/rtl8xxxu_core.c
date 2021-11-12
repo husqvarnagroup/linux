@@ -4499,6 +4499,10 @@ static int rtl8xxxu_init_device(struct ieee80211_hw *hw)
 		val32 |= 0x0007e000;
 		rtl8xxxu_write32(priv, REG_AFE_MISC, val32);
 	}
+
+	/*  Align with 8192cu driver */
+	rtl8xxxu_write16(priv, REG_PKT_VO_VI_LIFE_TIME, 0x0400);
+	rtl8xxxu_write16(priv, REG_PKT_BE_BK_LIFE_TIME, 0x0400);
 exit:
 	return ret;
 }
