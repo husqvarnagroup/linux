@@ -2464,6 +2464,11 @@ void rtl8xxxu_gen1_init_phy_bb(struct rtl8xxxu_priv *priv)
 	val16 |= SYS_FUNC_BB_GLB_RSTN | SYS_FUNC_BBRSTB;
 	rtl8xxxu_write16(priv, REG_SYS_FUNC, val16);
 
+	val16 = rtl8xxxu_read16(priv, REG_SYS_FUNC);
+	val16 |= SYS_FUNC_PPLL;
+	val16 &= ~SYS_FUNC_DIO_RF;
+	rtl8xxxu_write16(priv, REG_SYS_FUNC, val16);
+
 	val32 = rtl8xxxu_read32(priv, REG_AFE_XTAL_CTRL);
 	val32 &= ~AFE_XTAL_CTRL_RF_GATE;
 	if (priv->has_bluetooth)
