@@ -192,7 +192,7 @@
 #define REG_AFE_CTRL4			0x0078	/* 8192eu/8723bu */
 #define REG_LDO_SW_CTRL			0x007c	/* 8192eu */
 
-#define REG_MCU_FW_DL			0x0080
+#define REG_MCU				0x0080
 #define  MCU_FW_DL_ENABLE		BIT(0)
 #define  MCU_FW_DL_READY		BIT(1)
 #define  MCU_FW_DL_CSUM_REPORT		BIT(2)
@@ -202,6 +202,7 @@
 #define  MCU_WINT_INIT_READY		BIT(6)
 #define  MCU_FW_RAM_SEL			BIT(7)	/* 1: RAM, 0:ROM */
 #define  MCU_CP_RESET			BIT(23)
+#define  MCU_UNKNOWN_8192CU_UNSTABLE	(BIT(26) | BIT(27))
 
 #define REG_HMBOX_EXT_0			0x0088
 #define REG_HMBOX_EXT_1			0x008a
@@ -414,7 +415,7 @@
 #define REG_MCUTST_1			0x01c0
 #define REG_MCUTST_2			0x01c4
 /* Observed toggling; Unknown purpuse */
-#define  MCUTST_2_TOGGLE_ON_READ	BIT(0)
+#define  MCUTST_2_8192CU_UNSTABLE	BIT(0)
 #define REG_FMTHR			0x01c8
 #define REG_HMTFR			0x01cc
 #define REG_HMBOX_0			0x01d0

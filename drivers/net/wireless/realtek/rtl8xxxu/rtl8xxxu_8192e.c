@@ -1615,7 +1615,7 @@ static void rtl8192eu_power_off(struct rtl8xxxu_priv *priv)
 	rtl8192eu_active_to_lps(priv);
 
 	/* Reset Firmware if running in RAM */
-	if (rtl8xxxu_read8(priv, REG_MCU_FW_DL) & MCU_FW_RAM_SEL)
+	if (rtl8xxxu_read8(priv, REG_MCU) & MCU_FW_RAM_SEL)
 		rtl8xxxu_firmware_self_reset(priv);
 
 	/* Reset MCU */
@@ -1624,7 +1624,7 @@ static void rtl8192eu_power_off(struct rtl8xxxu_priv *priv)
 	rtl8xxxu_write16(priv, REG_SYS_FUNC, val16);
 
 	/* Reset MCU ready status */
-	rtl8xxxu_write8(priv, REG_MCU_FW_DL, 0x00);
+	rtl8xxxu_write8(priv, REG_MCU, 0x00);
 
 	rtl8xxxu_reset_8051(priv);
 

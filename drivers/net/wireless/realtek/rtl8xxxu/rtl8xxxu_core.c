@@ -2118,7 +2118,7 @@ static int rtl8xxxu_start_firmware(struct rtl8xxxu_priv *priv)
 
 	/* Poll checksum report */
 	for (i = 0; i < RTL8XXXU_FIRMWARE_POLL_MAX; i++) {
-		val32 = rtl8xxxu_read32(priv, REG_MCU_FW_DL);
+		val32 = rtl8xxxu_read32(priv, REG_MCU);
 		if (val32 & MCU_FW_DL_CSUM_REPORT)
 			break;
 	}
@@ -2129,10 +2129,10 @@ static int rtl8xxxu_start_firmware(struct rtl8xxxu_priv *priv)
 		goto exit;
 	}
 
-	val32 = rtl8xxxu_read32(priv, REG_MCU_FW_DL);
+	val32 = rtl8xxxu_read32(priv, REG_MCU);
 	val32 |= MCU_FW_DL_READY;
 	val32 &= ~MCU_WINT_INIT_READY;
-	rtl8xxxu_write32(priv, REG_MCU_FW_DL, val32);
+	rtl8xxxu_write32(priv, REG_MCU, val32);
 
 	/*
 	 * Reset the 8051 in order for the firmware to start running,
@@ -2142,7 +2142,7 @@ static int rtl8xxxu_start_firmware(struct rtl8xxxu_priv *priv)
 
 	/* Wait for firmware to become ready */
 	for (i = 0; i < RTL8XXXU_FIRMWARE_POLL_MAX; i++) {
-		val32 = rtl8xxxu_read32(priv, REG_MCU_FW_DL);
+		val32 = rtl8xxxu_read32(priv, REG_MCU);
 		if (val32 & MCU_WINT_INIT_READY)
 			break;
 
@@ -2181,27 +2181,27 @@ static int rtl8xxxu_download_firmware(struct rtl8xxxu_priv *priv)
 	val16 |= SYS_FUNC_CPU_ENABLE;
 	rtl8xxxu_write16(priv, REG_SYS_FUNC, val16);
 
-	val8 = rtl8xxxu_read8(priv, REG_MCU_FW_DL);
+	val8 = rtl8xxxu_read8(priv, REG_MCU);
 	if (val8 & MCU_FW_RAM_SEL) {
 		pr_info("do the RAM reset\n");
-		rtl8xxxu_write8(priv, REG_MCU_FW_DL, 0x00);
+		rtl8xxxu_write8(priv, REG_MCU, 0x00);
 		priv->fops->reset_8051(priv);
 	}
 
 	/* MCU firmware download enable */
-	val8 = rtl8xxxu_read8(priv, REG_MCU_FW_DL);
+	val8 = rtl8xxxu_read8(priv, REG_MCU);
 	val8 |= MCU_FW_DL_ENABLE;
-	rtl8xxxu_write8(priv, REG_MCU_FW_DL, val8);
+	rtl8xxxu_write8(priv, REG_MCU, val8);
 
 	/* 8051 reset */
-	val32 = rtl8xxxu_read32(priv, REG_MCU_FW_DL);
+	val32 = rtl8xxxu_read32(priv, REG_MCU);
 	val32 &= ~BIT(19);
-	rtl8xxxu_write32(priv, REG_MCU_FW_DL, val32);
+	rtl8xxxu_write32(priv, REG_MCU, val32);
 
 	/* Reset firmware download checksum */
-	val8 = rtl8xxxu_read8(priv, REG_MCU_FW_DL);
+	val8 = rtl8xxxu_read8(priv, REG_MCU);
 	val8 |= MCU_FW_DL_CSUM_REPORT;
-	rtl8xxxu_write8(priv, REG_MCU_FW_DL, val8);
+	rtl8xxxu_write8(priv, REG_MCU, val8);
 
 	pages = priv->fw_size / RTL_FW_PAGE_SIZE;
 	remainder = priv->fw_size % RTL_FW_PAGE_SIZE;
@@ -2209,9 +2209,9 @@ static int rtl8xxxu_download_firmware(struct rtl8xxxu_priv *priv)
 	fwptr = priv->fw_data->data;
 
 	for (i = 0; i < pages; i++) {
-		val8 = rtl8xxxu_read8(priv, REG_MCU_FW_DL + 2) & 0xF8;
+		val8 = rtl8xxxu_read8(priv, REG_MCU + 2) & 0xF8;
 		val8 |= i;
-		rtl8xxxu_write8(priv, REG_MCU_FW_DL + 2, val8);
+		rtl8xxxu_write8(priv, REG_MCU + 2, val8);
 
 		ret = rtl8xxxu_writeN(priv, REG_FW_START_ADDRESS,
 				      fwptr, RTL_FW_PAGE_SIZE);
@@ -2224,9 +2224,9 @@ static int rtl8xxxu_download_firmware(struct rtl8xxxu_priv *priv)
 	}
 
 	if (remainder) {
-		val8 = rtl8xxxu_read8(priv, REG_MCU_FW_DL + 2) & 0xF8;
+		val8 = rtl8xxxu_read8(priv, REG_MCU + 2) & 0xF8;
 		val8 |= i;
-		rtl8xxxu_write8(priv, REG_MCU_FW_DL + 2, val8);
+		rtl8xxxu_write8(priv, REG_MCU + 2, val8);
 		ret = rtl8xxxu_writeN(priv, REG_FW_START_ADDRESS,
 				      fwptr, remainder);
 		if (ret != remainder) {
@@ -2238,9 +2238,9 @@ static int rtl8xxxu_download_firmware(struct rtl8xxxu_priv *priv)
 	ret = 0;
 fw_abort:
 	/* MCU firmware download disable */
-	val16 = rtl8xxxu_read16(priv, REG_MCU_FW_DL);
+	val16 = rtl8xxxu_read16(priv, REG_MCU);
 	val16 &= ~MCU_FW_DL_ENABLE;
-	rtl8xxxu_write16(priv, REG_MCU_FW_DL, val16);
+	rtl8xxxu_write16(priv, REG_MCU, val16);
 
 	return ret;
 }
@@ -4055,7 +4055,7 @@ void rtl8xxxu_power_off(struct rtl8xxxu_priv *priv)
 	rtl8xxxu_write8(priv, REG_RF_CTRL, 0x00);
 
 	/* Reset Firmware if running in RAM */
-	if (rtl8xxxu_read8(priv, REG_MCU_FW_DL) & MCU_FW_RAM_SEL)
+	if (rtl8xxxu_read8(priv, REG_MCU) & MCU_FW_RAM_SEL)
 		rtl8xxxu_firmware_self_reset(priv);
 
 	/* Reset MCU */
@@ -4064,7 +4064,7 @@ void rtl8xxxu_power_off(struct rtl8xxxu_priv *priv)
 	rtl8xxxu_write16(priv, REG_SYS_FUNC, val16);
 
 	/* Reset MCU ready status */
-	rtl8xxxu_write8(priv, REG_MCU_FW_DL, 0x00);
+	rtl8xxxu_write8(priv, REG_MCU, 0x00);
 
 	rtl8xxxu_active_to_emu(priv);
 	rtl8xxxu_emu_to_disabled(priv);
