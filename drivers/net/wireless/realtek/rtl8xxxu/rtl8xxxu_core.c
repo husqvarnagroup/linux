@@ -4809,6 +4809,8 @@ static void rtl8xxxu_update_txpower(struct rtl8xxxu_priv *priv, int power)
 	u8 cck_txpwridx, ofdm_txpwridx;
 	int group;
 
+	dev_info(dev, "%s: power: %d\n", __func__, power);
+
 	if (!priv->fops->dbm_to_txpwridx)
 		return;
 
@@ -4904,6 +4906,7 @@ rtl8xxxu_bss_info_changed(struct ieee80211_hw *hw, struct ieee80211_vif *vif,
 	rarpt = &priv->ra_report;
 
 	if (changed & BSS_CHANGED_ASSOC) {
+		changed &= ~BSS_CHANGED_ASSOC;
 		dev_dbg(dev, "Changed ASSOC: %i!\n", bss_conf->assoc);
 
 		rtl8xxxu_set_linktype(priv, vif->type);
@@ -4984,6 +4987,7 @@ rtl8xxxu_bss_info_changed(struct ieee80211_hw *hw, struct ieee80211_vif *vif,
 	}
 
 	if (changed & BSS_CHANGED_ERP_PREAMBLE) {
+		changed &= ~BSS_CHANGED_ERP_PREAMBLE;
 		dev_dbg(dev, "Changed ERP_PREAMBLE: Use short preamble %i\n",
 			bss_conf->use_short_preamble);
 		val32 = rtl8xxxu_read32(priv, REG_RESPONSE_RATE_SET);
@@ -4995,6 +4999,7 @@ rtl8xxxu_bss_info_changed(struct ieee80211_hw *hw, struct ieee80211_vif *vif,
 	}
 
 	if (changed & BSS_CHANGED_ERP_SLOT) {
+		changed &= ~BSS_CHANGED_ERP_SLOT;
 		dev_dbg(dev, "Changed ERP_SLOT: short_slot_time %i\n",
 			bss_conf->use_short_slot);
 
@@ -5006,21 +5011,25 @@ rtl8xxxu_bss_info_changed(struct ieee80211_hw *hw, struct ieee80211_vif *vif,
 	}
 
 	if (changed & BSS_CHANGED_BSSID) {
+		changed &= ~BSS_CHANGED_BSSID;
 		dev_dbg(dev, "Changed BSSID!\n");
 		rtl8xxxu_set_bssid(priv, bss_conf->bssid);
 	}
 
 	if (changed & BSS_CHANGED_BASIC_RATES) {
+		changed &= ~BSS_CHANGED_BASIC_RATES;
 		dev_dbg(dev, "Changed BASIC_RATES!\n");
 		rtl8xxxu_set_basic_rates(priv, bss_conf->basic_rates);
 	}
 
 	if (changed & BSS_CHANGED_TXPOWER) {
-		dev_dbg(dev, "Changed TX power!\n");
-		//rtl8xxxu_update_txpower(priv, bss_conf->txpower);	// iterate
-		rtl8xxxu_update_txpower(priv, hw->conf.power_level);
+		changed &= ~BSS_CHANGED_TXPOWER;
+		dev_dbg(dev, "Changed TX power to %d dBm!\n", bss_conf->txpower);
+		rtl8xxxu_update_txpower(priv, bss_conf->txpower);
 	}
 error:
+	if(changed)
+		dev_info(dev, "%s: Unhandled BSS info: 0x%04x\n", __func__, changed);
 	return;
 }
 
