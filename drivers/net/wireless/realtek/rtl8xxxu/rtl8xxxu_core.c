@@ -4755,6 +4755,9 @@ static void rtl8xxxu_set_basic_rates(struct rtl8xxxu_priv *priv, u32 rate_cfg)
 		rate_cfg = (rate_cfg >> 1);
 		rate_idx++;
 	}
+
+	dev_dbg(&priv->udev->dev, "%s: rate_idx %d\n", __func__, rate_idx);
+
 	rtl8xxxu_write8(priv, REG_INIRTS_RATE_SEL, rate_idx);
 }
 
