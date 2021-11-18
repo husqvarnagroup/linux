@@ -992,6 +992,9 @@ rtl8xxxu_gen1_h2c_cmd(struct rtl8xxxu_priv *priv, struct h2c_cmd *h2c, int len)
 	int mbox_reg, mbox_ext_reg;
 	u8 val8;
 
+	if (rtl8xxxu_debug & RTL8XXXU_DEBUG_FUNC_CALLS)
+		dev_dbg(&priv->udev->dev, "Entering %s", __func__);
+
 	mutex_lock(&priv->h2c_mutex);
 
 	mbox_nr = priv->next_mbox;
@@ -1090,6 +1093,9 @@ void rtl8xxxu_gen1_enable_rf(struct rtl8xxxu_priv *priv)
 	u8 val8;
 	u32 val32;
 
+	if (rtl8xxxu_debug & RTL8XXXU_DEBUG_FUNC_CALLS)
+		dev_dbg(&priv->udev->dev, "Entering %s", __func__);
+
 	val8 = rtl8xxxu_read8(priv, REG_SPS0_CTRL);
 	val8 |= BIT(0) | BIT(3);
 	rtl8xxxu_write8(priv, REG_SPS0_CTRL, val8);
@@ -1134,6 +1140,9 @@ void rtl8xxxu_gen1_disable_rf(struct rtl8xxxu_priv *priv)
 	u8 sps0;
 	u32 val32;
 
+	if (rtl8xxxu_debug & RTL8XXXU_DEBUG_FUNC_CALLS)
+		dev_dbg(&priv->udev->dev, "Entering %s", __func__);
+
 	sps0 = rtl8xxxu_read8(priv, REG_SPS0_CTRL);
 
 	/* RF RX code for preamble power saving */
@@ -1172,6 +1181,9 @@ static void rtl8xxxu_stop_tx_beacon(struct rtl8xxxu_priv *priv)
 {
 	u8 val8;
 
+	if (rtl8xxxu_debug & RTL8XXXU_DEBUG_FUNC_CALLS)
+		dev_dbg(&priv->udev->dev, "Entering %s", __func__);
+
 	val8 = rtl8xxxu_read8(priv, REG_FWHW_TXQ_CTRL + 2);
 	val8 &= ~BIT(6);
 	rtl8xxxu_write8(priv, REG_FWHW_TXQ_CTRL + 2, val8);
@@ -1203,6 +1215,10 @@ static int rtl8xxxu_gen1_channel_to_group(int channel)
 	else
 		group = 2;
 
+
+	if (rtl8xxxu_debug & RTL8XXXU_DEBUG_FUNC_CALLS)
+		printk("%s: channel %d -> group %d", __func__, channel, group);
+
 	return group;
 }
 
@@ -1212,6 +1228,8 @@ static int rtl8xxxu_gen1_channel_to_group(int channel)
 int rtl8xxxu_gen2_channel_to_group(int channel)
 {
 	int group;
+
+	printk("Entering %s", __func__);
 
 	if (channel < 3)
 		group = 0;
@@ -1235,6 +1253,9 @@ void rtl8xxxu_gen1_config_channel(struct ieee80211_hw *hw)
 	bool ht = true;
 	int sec_ch_above, channel;
 	int i;
+
+	if (rtl8xxxu_debug & RTL8XXXU_DEBUG_FUNC_CALLS)
+		dev_dbg(&priv->udev->dev, "Entering %s", __func__);
 
 	opmode = rtl8xxxu_read8(priv, REG_BW_OPMODE);
 	rsr = rtl8xxxu_read32(priv, REG_RESPONSE_RATE_SET);
@@ -1360,6 +1381,9 @@ void rtl8xxxu_gen2_config_channel(struct ieee80211_hw *hw)
 	bool ht = true;
 	int sec_ch_above, channel;
 	int i;
+
+	if (rtl8xxxu_debug & RTL8XXXU_DEBUG_FUNC_CALLS)
+		dev_dbg(&priv->udev->dev, "Entering %s", __func__);
 
 	rf_mode_bw = rtl8xxxu_read16(priv, REG_WMAC_TRXPTCL_CTL);
 	rf_mode_bw &= ~WMAC_TRXPTCL_CTL_BW_MASK;
@@ -1490,6 +1514,9 @@ rtl8xxxu_gen1_dbm_to_txpwridx(struct rtl8xxxu_priv *priv, u16 mode, int dbm)
 	u8 txpwridx;
 	long offset;
 
+	if (rtl8xxxu_debug & RTL8XXXU_DEBUG_FUNC_CALLS)
+		dev_dbg(&priv->udev->dev, "Entering %s", __func__);
+
 	switch (mode) {
 	case WIRELESS_MODE_B:
 		offset = -7;
@@ -1511,6 +1538,10 @@ rtl8xxxu_gen1_dbm_to_txpwridx(struct rtl8xxxu_priv *priv, u16 mode, int dbm)
 	if (txpwridx > MAX_TXPWR_IDX_NMODE_92S)
 		txpwridx = MAX_TXPWR_IDX_NMODE_92S;
 
+	if (rtl8xxxu_debug & RTL8XXXU_DEBUG_FUNC_CALLS)
+		dev_dbg(&priv->udev->dev, "%s: %d dBm, mode %u -> idx %d",
+			__func__, dbm, mode, txpwridx);
+
 	return txpwridx;
 }
 
@@ -1519,6 +1550,9 @@ rtl8xxxu_gen1_txpwridx_to_dbm(struct rtl8xxxu_priv *priv, u16 mode, u8 idx)
 {
 	int offset;
 	int pwrout_dbm;
+
+	if (rtl8xxxu_debug & RTL8XXXU_DEBUG_FUNC_CALLS)
+		dev_dbg(&priv->udev->dev, "Entering %s", __func__);
 
 	switch (mode) {
 	case WIRELESS_MODE_B:
@@ -1534,6 +1568,9 @@ rtl8xxxu_gen1_txpwridx_to_dbm(struct rtl8xxxu_priv *priv, u16 mode, u8 idx)
 	}
 	pwrout_dbm = idx / 2 + offset;
 
+	dev_dbg(&priv->udev->dev, "%s: idx %d -> %d dBm", __func__, idx,
+		pwrout_dbm);
+
 	return pwrout_dbm;
 }
 
@@ -1542,6 +1579,9 @@ rtl8xxxu_gen1_get_tx_power(struct rtl8xxxu_priv *priv)
 {
 	u8 txpwr_level;
 	int txpwr_dbm;
+
+	if (rtl8xxxu_debug & RTL8XXXU_DEBUG_FUNC_CALLS)
+		dev_dbg(&priv->udev->dev, "Entering %s", __func__);
 
 	txpwr_level = priv->cur_cck_txpwridx;
 	txpwr_dbm = rtl8xxxu_gen1_txpwridx_to_dbm(priv, WIRELESS_MODE_B,
@@ -1572,6 +1612,9 @@ rtl8xxxu_gen1_set_tx_power(struct rtl8xxxu_priv *priv, int channel, bool ht40)
 	u32 val32, ofdm_a, ofdm_b, mcs_a, mcs_b;
 	u8 val8;
 	int group, i;
+
+	if (rtl8xxxu_debug & RTL8XXXU_DEBUG_FUNC_CALLS)
+		dev_dbg(&priv->udev->dev, "Entering %s", __func__);
 
 	group = rtl8xxxu_gen1_channel_to_group(channel);
 
@@ -1702,6 +1745,9 @@ static void rtl8xxxu_set_linktype(struct rtl8xxxu_priv *priv,
 {
 	u8 val8;
 
+	if (rtl8xxxu_debug & RTL8XXXU_DEBUG_FUNC_CALLS)
+		dev_dbg(&priv->udev->dev, "Entering %s", __func__);
+
 	val8 = rtl8xxxu_read8(priv, REG_MSR);
 	val8 &= ~MSR_LINKTYPE_MASK;
 
@@ -1732,6 +1778,9 @@ rtl8xxxu_set_retry(struct rtl8xxxu_priv *priv, u16 short_retry, u16 long_retry)
 {
 	u16 val16;
 
+	if (rtl8xxxu_debug & RTL8XXXU_DEBUG_FUNC_CALLS)
+		dev_dbg(&priv->udev->dev, "Entering %s", __func__);
+
 	val16 = ((0x30 << RETRY_LIMIT_SHORT_SHIFT) &
 		 RETRY_LIMIT_SHORT_MASK) |
 		((0x30 << RETRY_LIMIT_LONG_SHIFT) &
@@ -1745,6 +1794,9 @@ rtl8xxxu_set_spec_sifs(struct rtl8xxxu_priv *priv, u16 cck, u16 ofdm)
 {
 	u16 val16;
 
+	if (rtl8xxxu_debug & RTL8XXXU_DEBUG_FUNC_CALLS)
+		dev_dbg(&priv->udev->dev, "Entering %s", __func__);
+
 	val16 = ((0xA << SPEC_SIFS_CCK_SHIFT) & SPEC_SIFS_CCK_MASK) |
 		((0x10 << SPEC_SIFS_OFDM_SHIFT) & SPEC_SIFS_OFDM_MASK);
 
@@ -1755,6 +1807,9 @@ static void rtl8xxxu_print_chipinfo(struct rtl8xxxu_priv *priv)
 {
 	struct device *dev = &priv->udev->dev;
 	char *cut;
+
+	if (rtl8xxxu_debug & RTL8XXXU_DEBUG_FUNC_CALLS)
+		dev_dbg(&priv->udev->dev, "Entering %s", __func__);
 
 	switch (priv->chip_cut) {
 	case 0:
@@ -1791,6 +1846,9 @@ static int rtl8xxxu_identify_chip(struct rtl8xxxu_priv *priv)
 	struct ieee80211_hw *hw = priv->hw;
 	u32 val32, bonding;
 	u16 val16;
+
+	if (rtl8xxxu_debug & RTL8XXXU_DEBUG_FUNC_CALLS)
+		dev_dbg(&priv->udev->dev, "Entering %s", __func__);
 
 	val32 = rtl8xxxu_read32(priv, REG_SYS_CFG);
 	priv->chip_cut = (val32 & SYS_CFG_CHIP_VERSION_MASK) >>
@@ -1950,6 +2008,9 @@ rtl8xxxu_read_efuse8(struct rtl8xxxu_priv *priv, u16 offset, u8 *data)
 	u8 val8;
 	u32 val32;
 
+	if (rtl8xxxu_debug & RTL8XXXU_DEBUG_FUNC_CALLS)
+		dev_dbg(&priv->udev->dev, "Entering %s", __func__);
+
 	/* Write Address */
 	rtl8xxxu_write8(priv, REG_EFUSE_CTRL + 1, offset & 0xff);
 	val8 = rtl8xxxu_read8(priv, REG_EFUSE_CTRL + 2);
@@ -1984,6 +2045,9 @@ static int rtl8xxxu_read_efuse(struct rtl8xxxu_priv *priv)
 	u8 val8, word_mask, header, extheader;
 	u16 val16, efuse_addr, offset;
 	u32 val32;
+
+	if (rtl8xxxu_debug & RTL8XXXU_DEBUG_FUNC_CALLS)
+		dev_dbg(&priv->udev->dev, "Entering %s", __func__);
 
 	val16 = rtl8xxxu_read16(priv, REG_9346CR);
 	if (val16 & EEPROM_ENABLE)
@@ -2094,6 +2158,9 @@ void rtl8xxxu_reset_8051(struct rtl8xxxu_priv *priv)
 	u8 val8;
 	u16 sys_func;
 
+	if (rtl8xxxu_debug & RTL8XXXU_DEBUG_FUNC_CALLS)
+		dev_dbg(&priv->udev->dev, "Entering %s", __func__);
+
 	val8 = rtl8xxxu_read8(priv, REG_RSV_CTRL + 1);
 	val8 &= ~BIT(0);
 	rtl8xxxu_write8(priv, REG_RSV_CTRL + 1, val8);
@@ -2115,6 +2182,9 @@ static int rtl8xxxu_start_firmware(struct rtl8xxxu_priv *priv)
 	struct device *dev = &priv->udev->dev;
 	int ret = 0, i;
 	u32 val32;
+
+	if (rtl8xxxu_debug & RTL8XXXU_DEBUG_FUNC_CALLS)
+		dev_dbg(&priv->udev->dev, "Entering %s", __func__);
 
 	/* Poll checksum report */
 	for (i = 0; i < RTL8XXXU_FIRMWARE_POLL_MAX; i++) {
@@ -2171,6 +2241,9 @@ static int rtl8xxxu_download_firmware(struct rtl8xxxu_priv *priv)
 	u16 val16;
 	u32 val32;
 	u8 *fwptr;
+
+	if (rtl8xxxu_debug & RTL8XXXU_DEBUG_FUNC_CALLS)
+		dev_dbg(&priv->udev->dev, "Entering %s", __func__);
 
 	val8 = rtl8xxxu_read8(priv, REG_SYS_FUNC + 1);
 	val8 |= 4;
@@ -2299,6 +2372,9 @@ void rtl8xxxu_firmware_self_reset(struct rtl8xxxu_priv *priv)
 	u16 val16;
 	int i = 100;
 
+	if (rtl8xxxu_debug & RTL8XXXU_DEBUG_FUNC_CALLS)
+		dev_dbg(&priv->udev->dev, "Entering %s", __func__);
+
 	/* Inform 8051 to perform reset */
 	rtl8xxxu_write8(priv, REG_HMTFR + 3, 0x20);
 
@@ -2327,6 +2403,9 @@ static void rtl8xxxu_print_mac_regs(struct rtl8xxxu_priv *priv,
 	struct device *dev = &priv->udev->dev;
 	int i;
 
+	if (rtl8xxxu_debug & RTL8XXXU_DEBUG_FUNC_CALLS)
+		dev_dbg(&priv->udev->dev, "Entering %s", __func__);
+
 	dev_info(dev, "======= MAC REG (%s) =======\n", DRIVER_NAME);
 	for (i = 0; i < 0x800; i += 16) {
 		dev_info(dev,
@@ -2344,6 +2423,9 @@ static void rtl8xxxu_print_bb_regs(struct rtl8xxxu_priv *priv,
 	struct device *dev = &priv->udev->dev;
 	int i;
 
+	if (rtl8xxxu_debug & RTL8XXXU_DEBUG_FUNC_CALLS)
+		dev_dbg(&priv->udev->dev, "Entering %s", __func__);
+
 	dev_info(dev, "======= BB REG (%s) =======\n", DRIVER_NAME);
 	for (i = 0x800; i < 0x1000; i += 16) {
 		dev_info(dev, "BB REG (%s) 0x%03x: 0x%08x 0x%08x 0x%08x 0x%08x",
@@ -2359,6 +2441,9 @@ void rtl8xxxu_print_rf_regs(struct rtl8xxxu_priv *priv,
 {
 	struct device *dev = &priv->udev->dev;
 	int i, path, path_nums;
+
+	if (rtl8xxxu_debug & RTL8XXXU_DEBUG_FUNC_CALLS)
+		dev_dbg(&priv->udev->dev, "Entering %s", __func__);
 
 	if (priv->tx_paths == 1)
 		path_nums = 1;
@@ -2388,6 +2473,9 @@ rtl8xxxu_init_mac(struct rtl8xxxu_priv *priv)
 	int i, ret;
 	u16 reg;
 	u8 val;
+
+	if (rtl8xxxu_debug & RTL8XXXU_DEBUG_FUNC_CALLS)
+		dev_dbg(&priv->udev->dev, "Entering %s", __func__);
 
 	if (rtl8xxxu_debug & RTL8XXXU_DEBUG_INIT_MAC) {
 		rtl8xxxu_print_mac_regs(priv, "pre init");
@@ -2426,6 +2514,9 @@ int rtl8xxxu_init_phy_regs(struct rtl8xxxu_priv *priv,
 	u16 reg;
 	u32 val;
 
+	if (rtl8xxxu_debug & RTL8XXXU_DEBUG_FUNC_CALLS)
+		dev_dbg(&priv->udev->dev, "Entering %s", __func__);
+
 	for (i = 0; ; i++) {
 		reg = array[i].reg;
 		val = array[i].val;
@@ -2450,6 +2541,9 @@ void rtl8xxxu_gen1_init_phy_bb(struct rtl8xxxu_priv *priv)
 	u8 val8, ldoa15, ldov12d, lpldo, ldohci12;
 	u16 val16;
 	u32 val32;
+
+	if (rtl8xxxu_debug & RTL8XXXU_DEBUG_FUNC_CALLS)
+		dev_dbg(&priv->udev->dev, "Entering %s", __func__);
 
 	val8 = rtl8xxxu_read8(priv, REG_AFE_PLL_CTRL);
 	udelay(2);
@@ -2740,6 +2834,9 @@ int rtl8xxxu_init_llt_table(struct rtl8xxxu_priv *priv)
 	int ret;
 	int i;
 	u8 last_tx_page;
+
+	if (rtl8xxxu_debug & RTL8XXXU_DEBUG_FUNC_CALLS)
+		dev_dbg(&priv->udev->dev, "Entering %s", __func__);
 
 	last_tx_page = priv->fops->total_page_num;
 
@@ -3602,6 +3699,9 @@ void rtl8xxxu_gen1_phy_iq_calibrate(struct rtl8xxxu_priv *priv)
 	s32 reg_tmp = 0;
 	bool simu;
 
+	if (rtl8xxxu_debug & RTL8XXXU_DEBUG_FUNC_CALLS)
+		dev_dbg(&priv->udev->dev, "Entering %s", __func__);
+
 	memset(result, 0, sizeof(result));
 	candidate = -1;
 
@@ -3695,6 +3795,9 @@ static void rtl8723a_phy_lc_calibrate(struct rtl8xxxu_priv *priv)
 {
 	u32 val32;
 	u32 rf_amode, rf_bmode = 0, lstf;
+
+	if (rtl8xxxu_debug & RTL8XXXU_DEBUG_FUNC_CALLS)
+		dev_dbg(&priv->udev->dev, "Entering %s", __func__);
 
 	/* Check continuous TX and Packet TX */
 	lstf = rtl8xxxu_read32(priv, REG_OFDM1_LSTF);
@@ -3990,6 +4093,9 @@ int rtl8xxxu_flush_fifo(struct rtl8xxxu_priv *priv)
 
 void rtl8xxxu_gen1_usb_quirks(struct rtl8xxxu_priv *priv)
 {
+	if (rtl8xxxu_debug & RTL8XXXU_DEBUG_FUNC_CALLS)
+		dev_dbg(&priv->udev->dev, "Entering %s", __func__);
+
 	/* Fix USB interface interference issue */
 	rtl8xxxu_write8(priv, 0xfe40, 0xe0);
 	rtl8xxxu_write8(priv, 0xfe41, 0x8d);
@@ -4037,6 +4143,9 @@ void rtl8xxxu_power_off(struct rtl8xxxu_priv *priv)
 	u8 val8;
 	u16 val16;
 	u32 val32;
+
+	if (rtl8xxxu_debug & RTL8XXXU_DEBUG_FUNC_CALLS)
+		dev_dbg(&priv->udev->dev, "Entering %s", __func__);
 
 	/*
 	 * Workaround for 8188RU LNA power leakage problem.
@@ -4087,6 +4196,9 @@ void rtl8723bu_set_ps_tdma(struct rtl8xxxu_priv *priv,
 {
 	struct h2c_cmd h2c;
 
+	if (rtl8xxxu_debug & RTL8XXXU_DEBUG_FUNC_CALLS)
+		dev_dbg(&priv->udev->dev, "Entering %s", __func__);
+
 	memset(&h2c, 0, sizeof(struct h2c_cmd));
 	h2c.b_type_dma.cmd = H2C_8723B_B_TYPE_TDMA;
 	h2c.b_type_dma.data1 = arg1;
@@ -4101,6 +4213,9 @@ void rtl8xxxu_gen2_disable_rf(struct rtl8xxxu_priv *priv)
 {
 	u32 val32;
 
+	if (rtl8xxxu_debug & RTL8XXXU_DEBUG_FUNC_CALLS)
+		dev_dbg(&priv->udev->dev, "Entering %s", __func__);
+
 	val32 = rtl8xxxu_read32(priv, REG_RX_WAIT_CCA);
 	val32 &= ~(BIT(22) | BIT(23));
 	rtl8xxxu_write32(priv, REG_RX_WAIT_CCA, val32);
@@ -4111,6 +4226,9 @@ static void rtl8xxxu_init_queue_reserved_page(struct rtl8xxxu_priv *priv)
 	struct rtl8xxxu_fileops *fops = priv->fops;
 	u32 hq, lq, nq, eq, pubq;
 	u32 val32;
+
+	if (rtl8xxxu_debug & RTL8XXXU_DEBUG_FUNC_CALLS)
+		dev_dbg(&priv->udev->dev, "Entering %s", __func__);
 
 	hq = 0;
 	lq = 0;
@@ -4148,6 +4266,9 @@ static int rtl8xxxu_init_device(struct ieee80211_hw *hw)
 	u8 val8;
 	u16 val16;
 	u32 val32;
+
+	if (rtl8xxxu_debug & RTL8XXXU_DEBUG_FUNC_CALLS)
+		dev_dbg(&priv->udev->dev, "Entering %s", __func__);
 
 	/* Check if MAC is already powered on */
 	val8 = rtl8xxxu_read8(priv, REG_CR);
@@ -4513,6 +4634,9 @@ static void rtl8xxxu_cam_write(struct rtl8xxxu_priv *priv,
 	u32 cmd, val32, addr, ctrl;
 	int j, i, tmp_debug;
 
+	if (rtl8xxxu_debug & RTL8XXXU_DEBUG_FUNC_CALLS)
+		dev_dbg(&priv->udev->dev, "Entering %s", __func__);
+
 	tmp_debug = rtl8xxxu_debug;
 	if (rtl8xxxu_debug & RTL8XXXU_DEBUG_KEY)
 		rtl8xxxu_debug |= RTL8XXXU_DEBUG_REG_WRITE;
@@ -4554,6 +4678,9 @@ int rtl8xxxu_get_antenna(struct ieee80211_hw *hw, u32 *tx_ant, u32 *rx_ant)
 {
 	struct rtl8xxxu_priv *priv = hw->priv;
 
+	if (rtl8xxxu_debug & RTL8XXXU_DEBUG_FUNC_CALLS)
+		dev_dbg(&priv->udev->dev, "Entering %s", __func__);
+
 	*tx_ant = BIT(priv->tx_paths) - 1;
 	*rx_ant = BIT(priv->rx_paths) - 1;
 
@@ -4577,6 +4704,9 @@ static void rtl8xxxu_sw_scan_complete(struct ieee80211_hw *hw,
 	struct rtl8xxxu_priv *priv = hw->priv;
 	u8 val8;
 
+	if (rtl8xxxu_debug & RTL8XXXU_DEBUG_FUNC_CALLS)
+		dev_dbg(&priv->udev->dev, "Entering %s", __func__);
+
 	val8 = rtl8xxxu_read8(priv, REG_BEACON_CTRL);
 	val8 &= ~BEACON_DISABLE_TSF_UPDATE;
 	rtl8xxxu_write8(priv, REG_BEACON_CTRL, val8);
@@ -4586,6 +4716,9 @@ void rtl8xxxu_update_rate_mask(struct rtl8xxxu_priv *priv,
 			       u32 ramask, u8 rateid, int sgi)
 {
 	struct h2c_cmd h2c;
+
+	if (rtl8xxxu_debug & RTL8XXXU_DEBUG_FUNC_CALLS)
+		dev_dbg(&priv->udev->dev, "Entering %s", __func__);
 
 	memset(&h2c, 0, sizeof(struct h2c_cmd));
 
@@ -4608,6 +4741,9 @@ void rtl8xxxu_gen2_update_rate_mask(struct rtl8xxxu_priv *priv,
 {
 	struct h2c_cmd h2c;
 	u8 bw = RTL8XXXU_CHANNEL_WIDTH_20;
+
+	if (rtl8xxxu_debug & RTL8XXXU_DEBUG_FUNC_CALLS)
+		dev_dbg(&priv->udev->dev, "Entering %s", __func__);
 
 	memset(&h2c, 0, sizeof(struct h2c_cmd));
 
@@ -4633,6 +4769,9 @@ void rtl8xxxu_gen1_report_connect(struct rtl8xxxu_priv *priv,
 				  u8 macid, bool connect)
 {
 	struct h2c_cmd h2c;
+
+	if (rtl8xxxu_debug & RTL8XXXU_DEBUG_FUNC_CALLS)
+		dev_dbg(&priv->udev->dev, "Entering %s", __func__);
 
 	memset(&h2c, 0, sizeof(struct h2c_cmd));
 
@@ -4673,6 +4812,9 @@ void rtl8xxxu_gen2_report_connect(struct rtl8xxxu_priv *priv,
 void rtl8xxxu_gen1_init_aggregation(struct rtl8xxxu_priv *priv)
 {
 	u8 agg_ctrl, usb_spec, page_thresh, timeout;
+
+	if (rtl8xxxu_debug & RTL8XXXU_DEBUG_FUNC_CALLS)
+		dev_dbg(&priv->udev->dev, "Entering %s", __func__);
 
 	usb_spec = rtl8xxxu_read8(priv, REG_USB_SPECIAL_OPTION);
 	usb_spec &= ~USB_SPEC_USB_AGG_ENABLE;
@@ -4743,6 +4885,9 @@ static void rtl8xxxu_set_basic_rates(struct rtl8xxxu_priv *priv, u32 rate_cfg)
 	u32 val32;
 	u8 rate_idx = 0;
 
+	if (rtl8xxxu_debug & RTL8XXXU_DEBUG_FUNC_CALLS)
+		dev_dbg(&priv->udev->dev, "Entering %s", __func__);
+
 	rate_cfg &= RESPONSE_RATE_BITMAP_ALL;
 
 	val32 = rtl8xxxu_read32(priv, REG_RESPONSE_RATE_SET);
@@ -4769,6 +4914,10 @@ static u16
 rtl8xxxu_wireless_mode(struct ieee80211_hw *hw, struct ieee80211_sta *sta)
 {
 	u16 network_type = WIRELESS_MODE_UNKNOWN;
+	struct rtl8xxxu_priv *priv = hw->priv;
+
+	if (rtl8xxxu_debug & RTL8XXXU_DEBUG_FUNC_CALLS)
+		dev_dbg(&priv->udev->dev, "Entering %s", __func__);
 
 	if (hw->conf.chandef.chan->band == NL80211_BAND_5GHZ) {
 		if (sta->vht_cap.vht_supported)
@@ -4799,10 +4948,15 @@ static int rtl8xxxu_get_txpower(struct ieee80211_hw *hw,
 {
 	struct rtl8xxxu_priv *priv = hw->priv;
 
+	if (rtl8xxxu_debug & RTL8XXXU_DEBUG_FUNC_CALLS)
+		dev_dbg(&priv->udev->dev, "Entering %s", __func__);
+
 	if (!priv->fops->get_tx_power)
 		return -EOPNOTSUPP;
 
 	*dbm = priv->fops->get_tx_power(priv);
+
+	dev_info(&priv->udev->dev, "%s: power=%d dBm\n", __func__, *dbm);
 
 	return 0;
 }
@@ -4816,7 +4970,7 @@ static void rtl8xxxu_update_txpower(struct rtl8xxxu_priv *priv, int power)
 	u8 cck_txpwridx, ofdm_txpwridx;
 	int group;
 
-	dev_info(dev, "%s: power: %d\n", __func__, power);
+	dev_info(dev, "%s: power=%d dBm\n", __func__, power);
 
 	if (!priv->fops->dbm_to_txpwridx)
 		return;
@@ -4909,6 +5063,9 @@ rtl8xxxu_bss_info_changed(struct ieee80211_hw *hw, struct ieee80211_vif *vif,
 	struct rtl8xxxu_ra_report *rarpt;
 	u32 val32;
 	u8 val8;
+
+	if (rtl8xxxu_debug & RTL8XXXU_DEBUG_FUNC_CALLS)
+		dev_dbg(&priv->udev->dev, "Entering %s", __func__);
 
 	rarpt = &priv->ra_report;
 
@@ -5044,6 +5201,9 @@ static u32 rtl8xxxu_80211_to_rtl_queue(u32 queue)
 {
 	u32 rtlqueue;
 
+	if (rtl8xxxu_debug & RTL8XXXU_DEBUG_FUNC_CALLS)
+		printk("Entering %s", __func__);
+
 	switch (queue) {
 	case IEEE80211_AC_VO:
 		rtlqueue = TXDESC_QUEUE_VO;
@@ -5069,6 +5229,9 @@ static u32 rtl8xxxu_queue_select(struct ieee80211_hw *hw, struct sk_buff *skb)
 	struct ieee80211_hdr *hdr = (struct ieee80211_hdr *)skb->data;
 	u32 queue;
 
+	if (rtl8xxxu_debug & RTL8XXXU_DEBUG_FUNC_CALLS)
+		printk("Entering %s", __func__);
+
 	if (ieee80211_is_mgmt(hdr->frame_control))
 		queue = TXDESC_QUEUE_MGNT;
 	else
@@ -5088,6 +5251,9 @@ static void rtl8xxxu_calc_tx_desc_csum(struct rtl8xxxu_txdesc32 *tx_desc)
 	u16 csum = 0;
 	int i;
 
+	if (rtl8xxxu_debug & RTL8XXXU_DEBUG_FUNC_CALLS)
+		printk("Entering %s", __func__);
+
 	/*
 	 * Clear csum field before calculation, as the csum field is
 	 * in the middle of the struct.
@@ -5105,6 +5271,9 @@ static void rtl8xxxu_free_tx_resources(struct rtl8xxxu_priv *priv)
 	struct rtl8xxxu_tx_urb *tx_urb, *tmp;
 	unsigned long flags;
 
+	if (rtl8xxxu_debug & RTL8XXXU_DEBUG_FUNC_CALLS)
+		dev_dbg(&priv->udev->dev, "Entering %s", __func__);
+
 	spin_lock_irqsave(&priv->tx_urb_lock, flags);
 	list_for_each_entry_safe(tx_urb, tmp, &priv->tx_urb_free_list, list) {
 		list_del(&tx_urb->list);
@@ -5119,6 +5288,9 @@ rtl8xxxu_alloc_tx_urb(struct rtl8xxxu_priv *priv)
 {
 	struct rtl8xxxu_tx_urb *tx_urb;
 	unsigned long flags;
+
+	if (rtl8xxxu_debug & RTL8XXXU_DEBUG_FUNC_CALLS)
+		dev_dbg(&priv->udev->dev, "Entering %s", __func__);
 
 	spin_lock_irqsave(&priv->tx_urb_lock, flags);
 	tx_urb = list_first_entry_or_null(&priv->tx_urb_free_list,
@@ -5142,6 +5314,9 @@ static void rtl8xxxu_free_tx_urb(struct rtl8xxxu_priv *priv,
 				 struct rtl8xxxu_tx_urb *tx_urb)
 {
 	unsigned long flags;
+
+	if (rtl8xxxu_debug & RTL8XXXU_DEBUG_FUNC_CALLS)
+		dev_dbg(&priv->udev->dev, "Entering %s", __func__);
 
 	INIT_LIST_HEAD(&tx_urb->list);
 
@@ -5171,6 +5346,9 @@ static void rtl8xxxu_tx_complete(struct urb *urb)
 	hw = tx_info->rate_driver_data[0];
 	priv = hw->priv;
 
+	if (rtl8xxxu_debug & RTL8XXXU_DEBUG_FUNC_CALLS)
+		dev_dbg(&priv->udev->dev, "Entering %s", __func__);
+
 	skb_pull(skb, priv->fops->tx_desc_size);
 
 	ieee80211_tx_info_clear_status(tx_info);
@@ -5190,6 +5368,9 @@ static void rtl8xxxu_dump_action(struct device *dev,
 {
 	struct ieee80211_mgmt *mgmt = (struct ieee80211_mgmt *)hdr;
 	u16 cap, timeout;
+
+	if (rtl8xxxu_debug & RTL8XXXU_DEBUG_FUNC_CALLS)
+		dev_dbg(dev, "Entering %s", __func__);
 
 	if (!(rtl8xxxu_debug & RTL8XXXU_DEBUG_ACTION))
 		return;
@@ -5242,6 +5423,9 @@ rtl8xxxu_fill_txdesc_v1(struct ieee80211_hw *hw, struct ieee80211_hdr *hdr,
 	u32 rate;
 	u16 rate_flags = tx_info->control.rates[0].flags;
 	u16 seq_number;
+
+	if (rtl8xxxu_debug & RTL8XXXU_DEBUG_FUNC_CALLS)
+		dev_dbg(&priv->udev->dev, "Entering %s", __func__);
 
 	if (rate_flags & IEEE80211_TX_RC_MCS &&
 	    !ieee80211_is_mgmt(hdr->frame_control))
@@ -5389,6 +5573,9 @@ static void rtl8xxxu_tx(struct ieee80211_hw *hw,
 	int ret;
 	bool ampdu_enable, sgi = false, short_preamble = false;
 
+	if (rtl8xxxu_debug & RTL8XXXU_DEBUG_FUNC_CALLS)
+		dev_dbg(&priv->udev->dev, "Entering %s", __func__);
+
 	if (skb_headroom(skb) < tx_desc_size) {
 		dev_warn(dev,
 			 "%s: Not enough headroom (%i) for tx descriptor\n",
@@ -5510,6 +5697,9 @@ static void rtl8xxxu_rx_parse_phystats(struct rtl8xxxu_priv *priv,
 				       struct rtl8723au_phy_stats *phy_stats,
 				       u32 rxmcs)
 {
+	if (rtl8xxxu_debug & RTL8XXXU_DEBUG_FUNC_CALLS)
+		dev_dbg(&priv->udev->dev, "Entering %s", __func__);
+
 	if (phy_stats->sgi_en)
 		rx_status->enc_flags |= RX_ENC_FLAG_SHORT_GI;
 
@@ -5549,6 +5739,9 @@ static void rtl8xxxu_free_rx_resources(struct rtl8xxxu_priv *priv)
 	struct rtl8xxxu_rx_urb *rx_urb, *tmp;
 	unsigned long flags;
 
+	if (rtl8xxxu_debug & RTL8XXXU_DEBUG_FUNC_CALLS)
+		dev_dbg(&priv->udev->dev, "Entering %s", __func__);
+
 	spin_lock_irqsave(&priv->rx_urb_lock, flags);
 
 	list_for_each_entry_safe(rx_urb, tmp,
@@ -5567,6 +5760,9 @@ static void rtl8xxxu_queue_rx_urb(struct rtl8xxxu_priv *priv,
 	struct sk_buff *skb;
 	unsigned long flags;
 	int pending = 0;
+
+	if (rtl8xxxu_debug & RTL8XXXU_DEBUG_FUNC_CALLS)
+		dev_dbg(&priv->udev->dev, "Entering %s", __func__);
 
 	spin_lock_irqsave(&priv->rx_urb_lock, flags);
 
@@ -5596,6 +5792,10 @@ static void rtl8xxxu_rx_urb_work(struct work_struct *work)
 	int ret;
 
 	priv = container_of(work, struct rtl8xxxu_priv, rx_urb_wq);
+
+	if (rtl8xxxu_debug & RTL8XXXU_DEBUG_FUNC_CALLS)
+		dev_dbg(&priv->udev->dev, "Entering %s", __func__);
+
 	INIT_LIST_HEAD(&local);
 
 	spin_lock_irqsave(&priv->rx_urb_lock, flags);
@@ -5639,6 +5839,9 @@ static void rtl8xxxu_rx_urb_work(struct work_struct *work)
 static
 void rtl8723bu_set_coex_with_type(struct rtl8xxxu_priv *priv, u8 type)
 {
+	if (rtl8xxxu_debug & RTL8XXXU_DEBUG_FUNC_CALLS)
+		dev_dbg(&priv->udev->dev, "Entering %s", __func__);
+
 	switch (type) {
 	case 0:
 		rtl8xxxu_write32(priv, REG_BT_COEX_TABLE1, 0x55555555);
@@ -5692,6 +5895,9 @@ static
 void rtl8723bu_update_bt_link_info(struct rtl8xxxu_priv *priv, u8 bt_info)
 {
 	struct rtl8xxxu_btcoex *btcoex = &priv->bt_coex;
+
+	if (rtl8xxxu_debug & RTL8XXXU_DEBUG_FUNC_CALLS)
+		dev_dbg(&priv->udev->dev, "Entering %s", __func__);
 
 	if (bt_info & BT_INFO_8723B_1ANT_B_INQ_PAGE)
 		btcoex->c2h_bt_inquiry = true;
@@ -5762,6 +5968,9 @@ void rtl8723bu_handle_bt_inquiry(struct rtl8xxxu_priv *priv)
 	struct rtl8xxxu_btcoex *btcoex;
 	bool wifi_connected;
 
+	if (rtl8xxxu_debug & RTL8XXXU_DEBUG_FUNC_CALLS)
+		dev_dbg(&priv->udev->dev, "Entering %s", __func__);
+
 	vif = priv->vif;
 	btcoex = &priv->bt_coex;
 	wifi_connected = (vif && vif->bss_conf.assoc);
@@ -5787,6 +5996,9 @@ void rtl8723bu_handle_bt_info(struct rtl8xxxu_priv *priv)
 	struct ieee80211_vif *vif;
 	struct rtl8xxxu_btcoex *btcoex;
 	bool wifi_connected;
+
+	if (rtl8xxxu_debug & RTL8XXXU_DEBUG_FUNC_CALLS)
+		dev_dbg(&priv->udev->dev, "Entering %s", __func__);
 
 	vif = priv->vif;
 	btcoex = &priv->bt_coex;
@@ -5853,6 +6065,9 @@ static void rtl8xxxu_c2hcmd_callback(struct work_struct *work)
 	priv = container_of(work, struct rtl8xxxu_priv, c2hcmd_work);
 	btcoex = &priv->bt_coex;
 	rarpt = &priv->ra_report;
+
+	if (rtl8xxxu_debug & RTL8XXXU_DEBUG_FUNC_CALLS)
+		dev_dbg(&priv->udev->dev, "Entering %s", __func__);
 
 	if (priv->rf_paths > 1)
 		goto out;
@@ -5976,6 +6191,9 @@ int rtl8xxxu_parse_rxdesc16(struct rtl8xxxu_priv *priv, struct sk_buff *skb)
 	int drvinfo_sz, desc_shift;
 	int i, pkt_cnt, pkt_len, urb_len, pkt_offset;
 
+	if (rtl8xxxu_debug & RTL8XXXU_DEBUG_FUNC_CALLS)
+		dev_dbg(&priv->udev->dev, "Entering %s", __func__);
+
 	urb_len = skb->len;
 	pkt_cnt = 0;
 
@@ -6069,6 +6287,9 @@ int rtl8xxxu_parse_rxdesc24(struct rtl8xxxu_priv *priv, struct sk_buff *skb)
 	int drvinfo_sz, desc_shift;
 	int i;
 
+	if (rtl8xxxu_debug & RTL8XXXU_DEBUG_FUNC_CALLS)
+		dev_dbg(&priv->udev->dev, "Entering %s", __func__);
+
 	for (i = 0; i < (sizeof(struct rtl8xxxu_rxdesc24) / sizeof(u32)); i++)
 		_rx_desc[i] = le32_to_cpu(_rx_desc_le[i]);
 
@@ -6126,6 +6347,9 @@ static void rtl8xxxu_rx_complete(struct urb *urb)
 	struct sk_buff *skb = (struct sk_buff *)urb->context;
 	struct device *dev = &priv->udev->dev;
 
+	if (rtl8xxxu_debug & RTL8XXXU_DEBUG_FUNC_CALLS)
+		dev_dbg(&priv->udev->dev, "Entering %s", __func__);
+
 	skb_put(skb, urb->actual_length);
 
 	if (urb->status == 0) {
@@ -6153,6 +6377,9 @@ static int rtl8xxxu_submit_rx_urb(struct rtl8xxxu_priv *priv,
 	struct sk_buff *skb;
 	int skb_size;
 	int ret, rx_desc_sz;
+
+	if (rtl8xxxu_debug & RTL8XXXU_DEBUG_FUNC_CALLS)
+		dev_dbg(&priv->udev->dev, "Entering %s", __func__);
 
 	rx_desc_sz = fops->rx_desc_size;
 
@@ -6183,6 +6410,9 @@ static void rtl8xxxu_int_complete(struct urb *urb)
 	struct device *dev = &priv->udev->dev;
 	int ret;
 
+	if (rtl8xxxu_debug & RTL8XXXU_DEBUG_FUNC_CALLS)
+		dev_dbg(&priv->udev->dev, "Entering %s", __func__);
+
 	if (rtl8xxxu_debug & RTL8XXXU_DEBUG_INTERRUPT)
 		dev_dbg(dev, "%s: status %i\n", __func__, urb->status);
 	if (urb->status == 0) {
@@ -6202,6 +6432,9 @@ static int rtl8xxxu_submit_int_urb(struct ieee80211_hw *hw)
 	struct urb *urb;
 	u32 val32;
 	int ret;
+
+	if (rtl8xxxu_debug & RTL8XXXU_DEBUG_FUNC_CALLS)
+		dev_dbg(&priv->udev->dev, "Entering %s", __func__);
 
 	urb = usb_alloc_urb(0, GFP_KERNEL);
 	if (!urb)
@@ -6233,6 +6466,9 @@ static int rtl8xxxu_add_interface(struct ieee80211_hw *hw,
 	int ret;
 	u8 val8;
 
+	if (rtl8xxxu_debug & RTL8XXXU_DEBUG_FUNC_CALLS)
+		dev_dbg(&priv->udev->dev, "Entering %s", __func__);
+
 	switch (vif->type) {
 	case NL80211_IFTYPE_STATION:
 		if (!priv->vif)
@@ -6261,7 +6497,8 @@ static void rtl8xxxu_remove_interface(struct ieee80211_hw *hw,
 {
 	struct rtl8xxxu_priv *priv = hw->priv;
 
-	dev_dbg(&priv->udev->dev, "%s\n", __func__);
+	if (rtl8xxxu_debug & RTL8XXXU_DEBUG_FUNC_CALLS)
+		dev_dbg(&priv->udev->dev, "Entering %s", __func__);
 
 	if (priv->vif)
 		priv->vif = NULL;
@@ -6274,6 +6511,9 @@ static int rtl8xxxu_config(struct ieee80211_hw *hw, u32 changed)
 	u16 val16;
 	int ret = 0, channel;
 	bool ht40;
+
+	if (rtl8xxxu_debug & RTL8XXXU_DEBUG_FUNC_CALLS)
+		dev_dbg(&priv->udev->dev, "Entering %s", __func__);
 
 	if (rtl8xxxu_debug & RTL8XXXU_DEBUG_CHANNEL)
 		dev_info(dev,
@@ -6325,6 +6565,9 @@ static int rtl8xxxu_conf_tx(struct ieee80211_hw *hw,
 	struct device *dev = &priv->udev->dev;
 	u32 val32;
 	u8 aifs, acm_ctrl, acm_bit;
+
+	if (rtl8xxxu_debug & RTL8XXXU_DEBUG_FUNC_CALLS)
+		dev_dbg(&priv->udev->dev, "Entering %s", __func__);
 
 	aifs = param->aifs;
 
@@ -6428,6 +6671,11 @@ static void rtl8xxxu_configure_filter(struct ieee80211_hw *hw,
 
 static int rtl8xxxu_set_rts_threshold(struct ieee80211_hw *hw, u32 rts)
 {
+	struct rtl8xxxu_priv *priv = hw->priv;
+
+	if (rtl8xxxu_debug & RTL8XXXU_DEBUG_FUNC_CALLS)
+		dev_dbg(&priv->udev->dev, "Entering %s", __func__);
+
 	if (rts > 2347)
 		return -EINVAL;
 
@@ -6520,6 +6768,9 @@ rtl8xxxu_ampdu_action(struct ieee80211_hw *hw, struct ieee80211_vif *vif,
 	u16 tid = params->tid;
 	enum ieee80211_ampdu_mlme_action action = params->action;
 
+	if (rtl8xxxu_debug & RTL8XXXU_DEBUG_FUNC_CALLS)
+		dev_dbg(&priv->udev->dev, "Entering %s", __func__);
+
 	switch (action) {
 	case IEEE80211_AMPDU_TX_START:
 		dev_dbg(dev, "%s: IEEE80211_AMPDU_TX_START\n", __func__);
@@ -6563,6 +6814,9 @@ rtl8xxxu_sta_statistics(struct ieee80211_hw *hw, struct ieee80211_vif *vif,
 {
 	struct rtl8xxxu_priv *priv = hw->priv;
 
+	if (rtl8xxxu_debug & RTL8XXXU_DEBUG_FUNC_CALLS)
+		dev_dbg(&priv->udev->dev, "Entering %s", __func__);
+
 	sinfo->txrate = priv->ra_report.txrate;
 	sinfo->filled |= BIT_ULL(NL80211_STA_INFO_TX_BITRATE);
 }
@@ -6585,6 +6839,9 @@ static void rtl8xxxu_refresh_rate_mask(struct rtl8xxxu_priv *priv,
 	u8 txbw_40mhz;
 	u8 snr, snr_thresh_high, snr_thresh_low;
 	u8 go_up_gap = 5;
+
+	if (rtl8xxxu_debug & RTL8XXXU_DEBUG_FUNC_CALLS)
+		dev_dbg(&priv->udev->dev, "Entering %s", __func__);
 
 	rssi_level = priv->rssi_level;
 	snr = rtl8xxxu_signal_to_snr(signal);
@@ -6716,6 +6973,9 @@ static void rtl8xxxu_watchdog_callback(struct work_struct *work)
 	priv = container_of(work, struct rtl8xxxu_priv, ra_watchdog.work);
 	vif = priv->vif;
 
+	if (rtl8xxxu_debug & RTL8XXXU_DEBUG_FUNC_CALLS)
+		dev_dbg(&priv->udev->dev, "Entering %s", __func__);
+
 	if (vif && vif->type == NL80211_IFTYPE_STATION) {
 		int signal;
 		struct ieee80211_sta *sta;
@@ -6747,6 +7007,9 @@ static int rtl8xxxu_start(struct ieee80211_hw *hw)
 	struct sk_buff *skb;
 	unsigned long flags;
 	int ret, i;
+
+	if (rtl8xxxu_debug & RTL8XXXU_DEBUG_FUNC_CALLS)
+		dev_dbg(&priv->udev->dev, "Entering %s", __func__);
 
 	ret = 0;
 
@@ -6832,6 +7095,9 @@ static void rtl8xxxu_stop(struct ieee80211_hw *hw)
 	struct rtl8xxxu_priv *priv = hw->priv;
 	unsigned long flags;
 
+	if (rtl8xxxu_debug & RTL8XXXU_DEBUG_FUNC_CALLS)
+		dev_dbg(&priv->udev->dev, "Entering %s", __func__);
+
 	rtl8xxxu_write8(priv, REG_TXPAUSE, 0xff);
 
 	rtl8xxxu_write16(priv, REG_RXFLTMAP0, 0x0000);
@@ -6898,6 +7164,9 @@ static int rtl8xxxu_debug_get_macregs(struct seq_file *m, void *v)
 	struct rtl8xxxu_priv *priv = debugfs_priv->priv;
 	int i;
 
+	if (rtl8xxxu_debug & RTL8XXXU_DEBUG_FUNC_CALLS)
+		dev_dbg(&priv->udev->dev, "Entering %s", __func__);
+
 	seq_printf(m, "======= MAC REG (%s) =======\n", DRIVER_NAME);
 	for (i = 0; i < 0x800; i += 16) {
 		seq_printf(
@@ -6923,6 +7192,9 @@ static int rtl8xxxu_debug_get_bbregs(struct seq_file *m, void *v)
 	struct rtl8xxxu_priv *priv = debugfs_priv->priv;
 	int i;
 
+	if (rtl8xxxu_debug & RTL8XXXU_DEBUG_FUNC_CALLS)
+		dev_dbg(&priv->udev->dev, "Entering %s", __func__);
+
 	seq_printf(m, "======= BB REG (%s) =======\n", DRIVER_NAME);
 	for (i = 0x800; i < 0x1000; i += 16) {
 		seq_printf(
@@ -6946,6 +7218,9 @@ static int rtl8xxxu_debug_get_rfregs(struct seq_file *m, void *v)
 	struct rtl8xxxu_debugfs_priv *debugfs_priv = m->private;
 	struct rtl8xxxu_priv *priv = debugfs_priv->priv;
 	int i, path, path_nums;
+
+	if (rtl8xxxu_debug & RTL8XXXU_DEBUG_FUNC_CALLS)
+		dev_dbg(&priv->udev->dev, "Entering %s", __func__);
 
 	if (priv->tx_paths == 1)
 		path_nums = 1;
@@ -7023,6 +7298,9 @@ static int rtl8xxxu_parse_usb(struct rtl8xxxu_priv *priv,
 	u8 dir, xtype, num;
 	int ret = 0;
 
+	if (rtl8xxxu_debug & RTL8XXXU_DEBUG_FUNC_CALLS)
+		dev_dbg(&priv->udev->dev, "Entering %s", __func__);
+
 	host_interface = interface->cur_altsetting;
 	interface_desc = &host_interface->desc;
 	endpoints = interface_desc->bNumEndpoints;
@@ -7097,6 +7375,9 @@ static int rtl8xxxu_probe(struct usb_interface *interface,
 	struct ieee80211_supported_band *sband;
 	int ret;
 	int untested = 1;
+
+	if (rtl8xxxu_debug & RTL8XXXU_DEBUG_FUNC_CALLS)
+		printk("Entering %s", __func__);
 
 	udev = usb_get_dev(interface_to_usbdev(interface));
 
@@ -7281,9 +7562,11 @@ static void rtl8xxxu_disconnect(struct usb_interface *interface)
 	struct rtl8xxxu_priv *priv;
 	struct ieee80211_hw *hw;
 
-
 	hw = usb_get_intfdata(interface);
 	priv = hw->priv;
+
+	if (rtl8xxxu_debug & RTL8XXXU_DEBUG_FUNC_CALLS)
+		dev_dbg(&priv->udev->dev, "Entering %s", __func__);
 
 	debugfs_remove_recursive(priv->debugfs_dir);
 	priv->debugfs_dir = NULL;

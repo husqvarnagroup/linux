@@ -331,6 +331,9 @@ static int rtl8192cu_load_firmware(struct rtl8xxxu_priv *priv)
 	char *fw_name;
 	int ret;
 
+	if (rtl8xxxu_debug & RTL8XXXU_DEBUG_FUNC_CALLS)
+		dev_dbg(&priv->udev->dev, "Entering %s", __func__);
+
 	if (!priv->vendor_umc)
 		fw_name = "rtlwifi/rtl8192cufw_TMSC.bin";
 	else if (priv->chip_cut || priv->rtl_chip == RTL8192C)
@@ -347,6 +350,9 @@ static int rtl8192cu_parse_efuse(struct rtl8xxxu_priv *priv)
 {
 	struct rtl8192cu_efuse *efuse = &priv->efuse_wifi.efuse8192;
 	int i;
+
+	if (rtl8xxxu_debug & RTL8XXXU_DEBUG_FUNC_CALLS)
+		dev_dbg(&priv->udev->dev, "Entering %s", __func__);
 
 	if (efuse->rtl_id != cpu_to_le16(0x8129))
 		return -EINVAL;
@@ -416,6 +422,9 @@ static int rtl8192cu_init_phy_rf(struct rtl8xxxu_priv *priv)
 	struct rtl8xxxu_rfregval *rftable;
 	int ret;
 
+	if (rtl8xxxu_debug & RTL8XXXU_DEBUG_FUNC_CALLS)
+		dev_dbg(&priv->udev->dev, "Entering %s", __func__);
+
 	if (rtl8xxxu_debug & RTL8XXXU_DEBUG_INIT_RF) {
 		rtl8xxxu_print_rf_regs(priv, "pre init");
 	}
@@ -449,6 +458,9 @@ static int rtl8192cu_power_on(struct rtl8xxxu_priv *priv)
 	u16 val16;
 	u32 val32;
 	int i;
+
+	if (rtl8xxxu_debug & RTL8XXXU_DEBUG_FUNC_CALLS)
+		dev_dbg(&priv->udev->dev, "Entering %s", __func__);
 
 	for (i = 100; i; i--) {
 		val8 = rtl8xxxu_read8(priv, REG_APS_FSMCO);
