@@ -819,7 +819,7 @@ int rtl8xxxu_write8(struct rtl8xxxu_priv *priv, u16 addr, u8 val)
 	mutex_unlock(&priv->usb_buf_mutex);
 
 	if (rtl8xxxu_debug & RTL8XXXU_DEBUG_REG_WRITE)
-		dev_info(&udev->dev, "%s(%04x) = 0x%02x\n",
+		dev_info(&udev->dev, "%s(%04x)  = 0x%02x\n",
 			 __func__, addr, val);
 	return ret;
 }
