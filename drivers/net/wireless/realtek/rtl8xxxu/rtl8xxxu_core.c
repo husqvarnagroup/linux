@@ -1956,7 +1956,7 @@ static int rtl8xxxu_identify_chip(struct rtl8xxxu_priv *priv)
 	}
 
 	val32 = rtl8xxxu_read32(priv, REG_GPIO_OUTSTS);
-	priv->rom_rev = (val32 & GPIO_RF_RL_ID) >> 28;
+	priv->rom_rev = (val32 & GPIO_OUTSTS_RF_RL_ID) >> 28;
 
 	val16 = rtl8xxxu_read16(priv, REG_NORMAL_SIE_EP_TX);
 	if (val16 & NORMAL_SIE_EP_TX_HIGH_MASK) {
@@ -2508,6 +2508,7 @@ rtl8xxxu_init_mac(struct rtl8xxxu_priv *priv)
 	rtl8xxxu_write8(priv, REG_APS_FSMCO + 3, 0x00);
 	rtl8xxxu_write8(priv, REG_LPLDO_CTRL, 0x5);
 	rtl8xxxu_write32(priv, 0x0014, 0x087BE955);
+	rtl8xxxu_write32(priv, REG_GPIO_OUTSTS, 0x00000088);
 
 	return 0;
 }
