@@ -4916,10 +4916,11 @@ static void rtl8xxxu_set_basic_rates(struct rtl8xxxu_priv *priv, u32 rate_cfg)
 	}
 
 	/* 8192cu */
-	rate_cfg = 0x0C0A08;
+	rate_idx = 0x08;
 	dev_dbg(&priv->udev->dev, "%s: rate_idx %d\n", __func__, rate_idx);
 
 	rtl8xxxu_write8(priv, REG_INIRTS_RATE_SEL, rate_idx);
+	rtl8xxxu_write8(priv, REG_INIDATA_RATE_SEL, 0x0B);
 }
 
 static u16
