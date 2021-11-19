@@ -480,6 +480,10 @@ static int rtl8192cu_power_on(struct rtl8xxxu_priv *priv)
 	rtl8xxxu_write8(priv, REG_SPS0_CTRL, 0x2b);
 	udelay(100);
 
+	/* 8192cu */
+	rtl8xxxu_write8(priv, REG_RSV_CTRL + 1, 0x30);
+	rtl8xxxu_write8(priv, REG_RSV_CTRL + 2, 0x1D);
+
 	val8 = rtl8xxxu_read8(priv, REG_LDOV12D_CTRL);
 	if (!(val8 & LDOV12D_CTRL_ENABLE)) {
 		pr_info("%s: Enabling LDOV12D (%02x)\n", __func__, val8);

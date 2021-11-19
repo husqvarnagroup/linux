@@ -1643,6 +1643,7 @@ static void rtl8192e_enable_rf(struct rtl8xxxu_priv *priv)
 
 	val8 = rtl8xxxu_read8(priv, REG_GPIO_MUXCFG);
 	val8 |= BIT(5);
+	val8 |= BIT(2); /* 8192cu */
 	rtl8xxxu_write8(priv, REG_GPIO_MUXCFG, val8);
 
 	/*
