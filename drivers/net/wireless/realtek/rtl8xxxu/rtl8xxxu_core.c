@@ -2504,6 +2504,10 @@ rtl8xxxu_init_mac(struct rtl8xxxu_priv *priv)
 		rtl8xxxu_print_mac_regs(priv, "post init");
 	}
 
+	/* as 8192cu */
+	rtl8xxxu_write8(priv, REG_APS_FSMCO + 3, 0x00);
+	rtl8xxxu_write8(priv, REG_LPLDO_CTRL, 0x5);
+
 	return 0;
 }
 

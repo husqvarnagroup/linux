@@ -562,9 +562,6 @@ static int rtl8192cu_power_on(struct rtl8xxxu_priv *priv)
 		rtl8xxxu_write32(priv, REG_FPGA0_XCD_RF_PARM, val32);
 	}
 
-	/* as 8192cu */
-	rtl8xxxu_write8(priv, REG_APS_FSMCO + 3, 0x00);
-
 	return 0;
 }
 
