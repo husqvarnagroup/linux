@@ -1128,9 +1128,12 @@ void rtl8xxxu_gen1_enable_rf(struct rtl8xxxu_priv *priv)
 	else
 		rtl8xxxu_write32(priv, REG_RX_WAIT_CCA, 0x631b25a0);
 
-	rtl8xxxu_write_rfreg(priv, RF_A, RF6052_REG_AC, 0x32d95);
+	rtl8xxxu_write_rfreg(priv, RF_A, RF6052_REG_AC, 0x082CD8);
 	if (priv->rf_paths == 2)
-		rtl8xxxu_write_rfreg(priv, RF_B, RF6052_REG_AC, 0x32d95);
+		rtl8xxxu_write_rfreg(priv, RF_B, RF6052_REG_AC, 0x082CD8);
+
+	/*  Align with 8192cu driver */
+	rtl8xxxu_write_rfreg(priv, RF_A, RF6052_REG_POW_TRSW, 0x000FC804);
 
 	rtl8xxxu_write8(priv, REG_TXPAUSE, 0x00);
 }
@@ -2512,6 +2515,8 @@ rtl8xxxu_init_mac(struct rtl8xxxu_priv *priv)
 	rtl8xxxu_write8(priv, REG_LEDCFG0, 0x00);
 	rtl8xxxu_write8(priv, REG_LEDCFG1, 0x00);
 	rtl8xxxu_write32(priv, REG_VOQ_INFO, 0x000000FF);
+	rtl8xxxu_write32(priv, 0x0614, 0x00007D49);
+	rtl8xxxu_write32(priv, 0x065C, 0x99113698);
 
 	return 0;
 }
@@ -2607,6 +2612,26 @@ void rtl8xxxu_gen1_init_phy_bb(struct rtl8xxxu_priv *priv)
 	lpldo = 1;
 	val32 = (lpldo << 24) | (ldohci12 << 16) | (ldov12d << 8) | ldoa15;
 	rtl8xxxu_write32(priv, REG_LDOA15_CTRL, val32);
+
+	/*  Align with 8192cu driver */
+	rtl8xxxu_write32(priv, REG_FPGA0_POWER_SAVE, 0x12200385);
+	rtl8xxxu_write32(priv, REG_FPGA0_XB_HSSI_PARM2, 0x8C000000);
+	rtl8xxxu_write32(priv, REG_TX_AGC_B_CCK1_55_MCS32, 0x00000000);
+	rtl8xxxu_write32(priv, REG_FPGA0_XCD_SWITCH_CTRL, 0x631B25A4);
+	rtl8xxxu_write32(priv, REG_FPGA0_XA_RF_INT_OE, 0x66F60230);
+	rtl8xxxu_write16(priv, REG_FPGA0_XA_RF_SW_CTRL, 0x0700);
+	rtl8xxxu_write16(priv, REG_FPGA0_XC_RF_SW_CTRL, 0x8000);
+	rtl8xxxu_write16(priv, REG_FPGA0_XD_RF_SW_CTRL, 0x2208);
+	rtl8xxxu_write32(priv, 0xA08, 0x8CCD8300);
+	rtl8xxxu_write32(priv, 0xA2C, 0x00D38000);
+	rtl8xxxu_write32(priv, 0xA74, 0x00003007);
+	rtl8xxxu_write32(priv, REG_OFDM0_AGC_PARM1, 0x2C7F0005);
+	rtl8xxxu_write32(priv, 0xDC8, 0x00000015);
+	rtl8xxxu_write32(priv, 0xDD0, 0x0000000B);
+	rtl8xxxu_write32(priv, 0xDD4, 0x00000003);
+	rtl8xxxu_write32(priv, REG_TX_AGC_A_CCK1_MCS32, 0x03902B2A);
+	rtl8xxxu_write32(priv, 0xF98, 0x00000000);
+	rtl8xxxu_write32(priv, 0xFB4, 0x000A1E16);
 }
 
 /*
@@ -4495,6 +4520,7 @@ static int rtl8xxxu_init_device(struct ieee80211_hw *hw)
 	 */
 	val16 = BEACON_DISABLE_TSF_UPDATE | (BEACON_DISABLE_TSF_UPDATE << 8);
 	rtl8xxxu_write16(priv, REG_BEACON_CTRL, val16);
+	rtl8xxxu_write16(priv, REG_BEACON_CTRL_1, 0x18);
 	rtl8xxxu_write16(priv, REG_TBTT_PROHIBIT, 0x6404);
 	rtl8xxxu_write8(priv, REG_DRIVER_EARLY_INT, DRIVER_EARLY_INT_TIME);
 	rtl8xxxu_write8(priv, REG_BEACON_DMA_TIME, BEACON_DMA_ATIME_INT_TIME);
@@ -6491,7 +6517,7 @@ static int rtl8xxxu_add_interface(struct ieee80211_hw *hw,
 		rtl8xxxu_stop_tx_beacon(priv);
 
 		val8 = rtl8xxxu_read8(priv, REG_BEACON_CTRL);
-		val8 |= BEACON_ATIM | BEACON_FUNCTION_ENABLE |
+		val8 |= BEACON_FUNCTION_ENABLE |
 			BEACON_DISABLE_TSF_UPDATE;
 		rtl8xxxu_write8(priv, REG_BEACON_CTRL, val8);
 		ret = 0;
