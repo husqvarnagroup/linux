@@ -4555,7 +4555,7 @@ static int rtl8xxxu_init_device(struct ieee80211_hw *hw)
 	/* Disable BAR - not sure if this has any effect on USB */
 	rtl8xxxu_write32(priv, REG_BAR_MODE_CTRL, 0x0201ffff);
 
-	rtl8xxxu_write16(priv, REG_FAST_EDCA_CTRL, 0);
+	rtl8xxxu_write16(priv, REG_FAST_EDCA_CTRL, 0x6666);
 
 	if (fops->init_statistics)
 		fops->init_statistics(priv);
