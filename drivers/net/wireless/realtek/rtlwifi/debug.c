@@ -69,6 +69,31 @@ static const struct file_operations file_ops_common = {
 	.release = single_release,
 };
 
+static int rtl_debug_get_macregs(struct seq_file *m, void *v)
+{
+	struct rtl_debugfs_priv *debugfs_priv = m->private;
+	struct rtl_priv *rtlpriv = debugfs_priv->rtlpriv;
+	int i;
+
+	seq_printf(m, "======= MAC REG (rtlwifi) =======\n");
+	for (i = 0; i < 0x800; i += 16) {
+		seq_printf(
+			m,
+			"0x%03x: 0x%08x 0x%08x 0x%08x 0x%08x\n",
+			i, rtl_read_dword(rtlpriv, i + 0),
+			rtl_read_dword(rtlpriv, i + 4),
+			rtl_read_dword(rtlpriv, i + 8),
+			rtl_read_dword(rtlpriv, i + 12));
+	}
+	return 0;
+}
+
+static struct rtl_debugfs_priv rtl_debug_priv_macregs = {
+	.cb_read = rtl_debug_get_macregs,
+	.cb_write = 0,
+	.cb_data = 0,
+};
+
 static int rtl_debug_get_mac_page(struct seq_file *m, void *v)
 {
 	struct rtl_debugfs_priv *debugfs_priv = m->private;
@@ -109,6 +134,30 @@ RTL_DEBUG_IMPL_MAC_SERIES(14, 0x1400);
 RTL_DEBUG_IMPL_MAC_SERIES(15, 0x1500);
 RTL_DEBUG_IMPL_MAC_SERIES(16, 0x1600);
 RTL_DEBUG_IMPL_MAC_SERIES(17, 0x1700);
+
+static int rtl_debug_get_bbregs(struct seq_file *m, void *v)
+{
+	struct rtl_debugfs_priv *debugfs_priv = m->private;
+	struct rtl_priv *rtlpriv = debugfs_priv->rtlpriv;
+	int i;
+
+	seq_printf(m, "======= BB REG (rtlwifi) =======\n");
+	for (i = 0x800; i < 0x1000; i += 16) {
+		seq_printf(
+			m,
+			"0x%03x: 0x%08x 0x%08x 0x%08x 0x%08x\n",
+			i, rtl_read_dword(rtlpriv, i + 0),
+			rtl_read_dword(rtlpriv, i + 4),
+			rtl_read_dword(rtlpriv, i + 8),
+			rtl_read_dword(rtlpriv, i + 12));
+	}
+	return 0;
+}
+
+static struct rtl_debugfs_priv rtl_debug_priv_bbregs = {
+	.cb_read = rtl_debug_get_bbregs,
+	.cb_data = 0,
+};
 
 static int rtl_debug_get_bb_page(struct seq_file *m, void *v)
 {
@@ -151,6 +200,37 @@ RTL_DEBUG_IMPL_BB_SERIES(1c, 0x1c00);
 RTL_DEBUG_IMPL_BB_SERIES(1d, 0x1d00);
 RTL_DEBUG_IMPL_BB_SERIES(1e, 0x1e00);
 RTL_DEBUG_IMPL_BB_SERIES(1f, 0x1f00);
+
+static int rtl_debug_get_rfregs(struct seq_file *m, void *v)
+{
+	struct rtl_debugfs_priv *debugfs_priv = m->private;
+	struct rtl_priv *rtlpriv = debugfs_priv->rtlpriv;
+	struct ieee80211_hw *hw = rtlpriv->hw;
+	int i;
+	int max = 0x40;
+
+	if (IS_HARDWARE_TYPE_8822B(rtlpriv))
+		max = 0xff;
+
+	seq_printf(m, "======== RF REG (rtlwifi) =======\n");
+	for (i = 0; i < max; i += 4) {
+		seq_printf(
+			m,
+			"0x%03x: 0x%08x 0x%08x 0x%08x 0x%08x\n",
+			i,
+			rtl_get_rfreg(hw, RF90_PATH_A, i, 0xffffffff),
+			rtl_get_rfreg(hw, RF90_PATH_A, i + 1, 0xffffffff),
+			rtl_get_rfreg(hw, RF90_PATH_A, i + 2, 0xffffffff),
+			rtl_get_rfreg(hw, RF90_PATH_A, i + 3, 0xffffffff));
+	}
+
+	return 0;
+}
+
+static struct rtl_debugfs_priv rtl_debug_priv_rfregs = {
+	.cb_read = rtl_debug_get_rfregs,
+	.cb_data = 0,
+};
 
 static int rtl_debug_get_reg_rf(struct seq_file *m, void *v)
 {
@@ -439,6 +519,16 @@ void rtl_debug_add_one(struct ieee80211_hw *hw)
 		debugfs_create_dir("rtlwifi", rtlpriv->hw->wiphy->debugfsdir);
 
 	parent = rtlpriv->dbg.debugfs_dir;
+
+	rtl_debug_priv_macregs.rtlpriv = rtlpriv;
+	debugfs_create_file("mac_reg_dump", S_IFREG | 0444, parent,
+			    &rtl_debug_priv_macregs, &file_ops_common);
+	rtl_debug_priv_bbregs.rtlpriv = rtlpriv;
+	debugfs_create_file("bb_reg_dump", S_IFREG | 0444, parent,
+			    &rtl_debug_priv_bbregs, &file_ops_common);
+	rtl_debug_priv_rfregs.rtlpriv = rtlpriv;
+	debugfs_create_file("rf_reg_dump", S_IFREG | 0444, parent,
+			    &rtl_debug_priv_rfregs, &file_ops_common);
 
 	RTL_DEBUGFS_ADD(mac_0);
 	RTL_DEBUGFS_ADD(mac_1);
