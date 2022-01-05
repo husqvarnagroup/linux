@@ -198,8 +198,6 @@ static inline void RT_PRINT_DATA(struct rtl_priv *rtlpriv,
 #ifdef CONFIG_RTLWIFI_DEBUG
 void rtl_debug_add_one(struct ieee80211_hw *hw);
 void rtl_debug_remove_one(struct ieee80211_hw *hw);
-void rtl_debugfs_add_topdir(void);
-void rtl_debugfs_remove_topdir(void);
 #else
 #define rtl_debug_add_one(hw)
 #define rtl_debug_remove_one(hw)
