@@ -50,8 +50,6 @@ struct rtl_debugfs_priv {
 	u32 cb_data;
 };
 
-static struct dentry *debugfs_topdir;
-
 static int rtl_debug_get_common(struct seq_file *m, void *v)
 {
 	struct rtl_debugfs_priv *debugfs_priv = m->private;
@@ -435,13 +433,10 @@ static const struct file_operations file_ops_common_write = {
 void rtl_debug_add_one(struct ieee80211_hw *hw)
 {
 	struct rtl_priv *rtlpriv = rtl_priv(hw);
-	struct rtl_efuse *rtlefuse = rtl_efuse(rtl_priv(hw));
 	struct dentry *parent;
 
-	snprintf(rtlpriv->dbg.debugfs_name, 18, "%pMF", rtlefuse->dev_addr);
-
 	rtlpriv->dbg.debugfs_dir =
-		debugfs_create_dir(rtlpriv->dbg.debugfs_name, debugfs_topdir);
+		debugfs_create_dir("rtlwifi", rtlpriv->hw->wiphy->debugfsdir);
 
 	parent = rtlpriv->dbg.debugfs_dir;
 
@@ -500,15 +495,5 @@ void rtl_debug_remove_one(struct ieee80211_hw *hw)
 	rtlpriv->dbg.debugfs_dir = NULL;
 }
 EXPORT_SYMBOL_GPL(rtl_debug_remove_one);
-
-void rtl_debugfs_add_topdir(void)
-{
-	debugfs_topdir = debugfs_create_dir("rtlwifi", NULL);
-}
-
-void rtl_debugfs_remove_topdir(void)
-{
-	debugfs_remove_recursive(debugfs_topdir);
-}
 
 #endif
