@@ -6687,6 +6687,7 @@ static int dl_debug_open_common(struct inode *inode, struct file *file)
 	return single_open(file, rtl8xxxu_debug_get_common, inode->i_private);
 }
 
+
 static const struct file_operations file_ops_common = {
 	.open = dl_debug_open_common,
 	.read = seq_read,
@@ -6775,6 +6776,213 @@ static struct rtl8xxxu_debugfs_priv rtl8xxxu_debug_priv_rfregs = {
 	.cb_data = 0,
 };
 
+static ssize_t rtl8xxxu_debug_write_reg(struct file *f,
+					const char __user *buffer,
+					size_t input_size, loff_t *loff)
+{
+	struct rtl8xxxu_priv *priv = file_inode(f)->i_private;
+	struct usb_device *udev = priv->udev;
+	char kernel_buffer[22]; /* Format: '[0x]XXXX [0x]XXXXXXXX[ [0x]X]' */
+	u32 address, value, value_old, length;
+	int num;
+
+	if (input_size >= sizeof(kernel_buffer))
+		return -EINVAL;
+
+	if (!buffer || copy_from_user(kernel_buffer, buffer, input_size))
+		return -EFAULT;
+
+	kernel_buffer[input_size] = '\0';
+
+	num = sscanf(kernel_buffer, "%x %x %x", &address, &value, &length);
+
+	if (num == 2)
+		length = 4; /* default to full register size */
+	else if (num != 3)
+		return input_size;
+
+	switch (length) {
+	case 1:
+		value_old = rtl8xxxu_read8(priv, address);
+		rtl8xxxu_write8(priv, address, (u8)value);
+		break;
+	case 2:
+		value_old = rtl8xxxu_read16(priv, address);
+		rtl8xxxu_write16(priv, address, (u16)value);
+		break;
+	case 4:
+		value_old = rtl8xxxu_read32(priv, address);
+		rtl8xxxu_write32(priv, address, value);
+		break;
+	default:
+		dev_err(&udev->dev,
+			"%s: Can not write register value of length %u\n",
+			__func__, length);
+		break;
+	}
+
+	dev_info(&udev->dev,
+		 "%s: Changed value at address 0x%x from 0x%x to 0x%x",
+		 __func__, address, value_old, value);
+
+	return input_size;
+}
+
+static const struct file_operations file_ops_write_reg = {
+	.owner = THIS_MODULE,
+	.write = rtl8xxxu_debug_write_reg,
+};
+
+static ssize_t rtl8xxxu_debug_read_reg(struct file *f,
+				       const char __user *buffer,
+				       size_t input_size, loff_t *loff)
+{
+	struct rtl8xxxu_priv *priv = file_inode(f)->i_private;
+	struct usb_device *udev = priv->udev;
+	char kernel_buffer[18]; /* Format: '[0x]XXXX [0x]XXXXXXXX' */
+	u32 address, length;
+	int num;
+
+	if (input_size >= sizeof(kernel_buffer))
+		return -EINVAL;
+
+	if (!buffer || copy_from_user(kernel_buffer, buffer, input_size))
+		return -EFAULT;
+
+	kernel_buffer[input_size] = '\0';
+
+	/* read BB/MAC register */
+	num = sscanf(kernel_buffer, "%x %x", &address, &length);
+
+	if (num == 1)
+		length = 4; /* default to full register size */
+	else if (num != 2)
+		return input_size;
+
+	switch (length) {
+	case 1:
+		dev_info(&udev->dev, "%s: Value at address 0x%x: 0x%x",
+			 __func__, address, rtl8xxxu_read8(priv, address));
+		break;
+	case 2:
+		dev_info(&udev->dev, "%s: Value at address 0x%x: 0x%x",
+			 __func__, address, rtl8xxxu_read16(priv, address));
+		break;
+	case 4:
+		dev_info(&udev->dev, "%s: Value at address 0x%x: 0x%x",
+			 __func__, address, rtl8xxxu_read32(priv, address));
+		break;
+	default:
+		dev_err(&udev->dev,
+			"%s: Can not read register value of length %u\n",
+			__func__, length);
+		break;
+	}
+
+	return input_size;
+}
+
+static const struct file_operations file_ops_read_reg = {
+	.owner = THIS_MODULE,
+	.write = rtl8xxxu_debug_read_reg,
+};
+
+static ssize_t rtl8xxxu_debug_write_reg_rf(struct file *f,
+					   const char __user *buffer,
+					   size_t input_size, loff_t *loff)
+{
+	struct rtl8xxxu_priv *priv = file_inode(f)->i_private;
+	struct usb_device *udev = priv->udev;
+	char kernel_buffer[30];
+	u32 address, value, value_old, path, reg_rf_max = 0x3F;
+	int num;
+
+	if (priv->rtl_chip == RTL8822B)
+		reg_rf_max = 0xFF;
+
+	if (input_size >= sizeof(kernel_buffer))
+		return -EINVAL;
+
+	if (!buffer || copy_from_user(kernel_buffer, buffer, input_size))
+		return -EFAULT;
+
+	kernel_buffer[input_size] = '\0';
+
+	/* write RF register */
+	num = sscanf(kernel_buffer, "%x %x %x", &address, &value, &path);
+
+	if (num == 2)
+		path = 0; /* default to path A */
+	else if (num != 3)
+		return -EINVAL;
+
+	if (path > 1)
+		return -EINVAL;
+
+	if (address > reg_rf_max)
+		return -EINVAL;
+
+	value_old =
+		rtl8xxxu_read_rfreg(priv, (enum rtl8xxxu_rfpath)path, address);
+	rtl8xxxu_write_rfreg(priv, (enum rtl8xxxu_rfpath)path, address, value);
+	dev_info(&udev->dev,
+		 "%s: Changed value at path %d, address 0x%x from 0x%x to 0x%x",
+		 __func__, path, address, value_old, value);
+
+	return input_size;
+}
+
+static const struct file_operations file_ops_rf_reg_write = {
+	.owner = THIS_MODULE,
+	.write = rtl8xxxu_debug_write_reg_rf,
+};
+
+static ssize_t rtl8xxxu_debug_read_reg_rf(struct file *m,
+					  const char __user *buffer,
+					  size_t input_size, loff_t *loff)
+{
+	struct rtl8xxxu_priv *priv = file_inode(m)->i_private;
+	struct usb_device *udev = priv->udev;
+	char kernel_buffer[30];
+	u32 address, path, reg_rf_max = 0x3F;
+	int num;
+
+	if (priv->rtl_chip == RTL8822B)
+		reg_rf_max = 0xFF;
+
+	if (input_size >= sizeof(kernel_buffer))
+		return -EINVAL;
+
+	if (!buffer || copy_from_user(kernel_buffer, buffer, input_size))
+		return -EFAULT;
+
+	kernel_buffer[input_size] = '\0';
+
+	num = sscanf(kernel_buffer, "%x %x", &address, &path);
+
+	if (num == 1)
+		path = 0; /* default to path A */
+	else if (num != 2)
+		return input_size;
+
+	if (path > 1)
+		return -EINVAL;
+
+	if (address > reg_rf_max)
+		return -EINVAL;
+
+	dev_info(&udev->dev, "%s: Value at path %d, address 0x%x: 0x%x",
+		 __func__, path, address,
+		 rtl8xxxu_read_rfreg(priv, path, address));
+
+	return input_size;
+}
+
+static const struct file_operations file_ops_reg_rf_read = {
+	.owner = THIS_MODULE,
+	.write = rtl8xxxu_debug_read_reg_rf,
+};
+
 void rtl8xxxu_debugfs_init(struct rtl8xxxu_priv *priv)
 {
 	priv->debugfs_dir =
@@ -6789,6 +6997,15 @@ void rtl8xxxu_debugfs_init(struct rtl8xxxu_priv *priv)
 	rtl8xxxu_debug_priv_rfregs.priv = priv;
 	debugfs_create_file("rf_reg_dump", S_IFREG | 0400, priv->debugfs_dir,
 			    &rtl8xxxu_debug_priv_rfregs, &file_ops_common);
+
+	debugfs_create_file("reg_write", S_IFREG | 0600, priv->debugfs_dir,
+			    priv, &file_ops_write_reg);
+	debugfs_create_file("reg_read", S_IFREG | 0600, priv->debugfs_dir, priv,
+			    &file_ops_read_reg);
+	debugfs_create_file("rf_reg_write", S_IFREG | 0600, priv->debugfs_dir,
+			    priv, &file_ops_rf_reg_write);
+	debugfs_create_file("rf_reg_read", S_IFREG | 0600, priv->debugfs_dir,
+			    priv, &file_ops_reg_rf_read);
 }
 
 void rtl8xxxu_debugfs_remove(struct rtl8xxxu_priv *priv)
