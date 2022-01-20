@@ -36,7 +36,7 @@
 
 int rtl8xxxu_debug = RTL8XXXU_DEBUG_EFUSE;
 static bool rtl8xxxu_ht40_2g;
-static bool rtl8xxxu_dma_aggregation;
+static bool rtl8xxxu_dma_aggregation = 1;
 static int rtl8xxxu_dma_agg_timeout = -1;
 static int rtl8xxxu_dma_agg_pages = -1;
 
