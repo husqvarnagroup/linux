@@ -3306,7 +3306,7 @@ static void rtl8xxxu_phy_iqcalibrate(struct rtl8xxxu_priv *priv,
 			break;
 		} else if (i == (retry - 1) && path_a_ok == 0x01) {
 			/* TX IQK OK */
-			dev_dbg(dev, "%s: Path A IQK Only Tx Success!!\n",
+			dev_err(dev, "%s: Path A IQK Only Tx Success!!\n",
 				__func__);
 
 			val32 = rtl8xxxu_read32(priv,
@@ -3319,7 +3319,7 @@ static void rtl8xxxu_phy_iqcalibrate(struct rtl8xxxu_priv *priv,
 	}
 
 	if (!path_a_ok)
-		dev_dbg(dev, "%s: Path A IQK failed!\n", __func__);
+		dev_err(dev, "%s: Path A IQK failed!\n", __func__);
 
 	if (priv->tx_paths > 1) {
 		/*
@@ -3354,7 +3354,7 @@ static void rtl8xxxu_phy_iqcalibrate(struct rtl8xxxu_priv *priv,
 		}
 
 		if (!path_b_ok)
-			dev_dbg(dev, "%s: Path B IQK failed!\n", __func__);
+			dev_err(dev, "%s: Path B IQK failed!\n", __func__);
 	}
 
 	/* Back to BB mode, load original value */
