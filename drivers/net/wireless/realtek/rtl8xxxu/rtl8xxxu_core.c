@@ -3291,6 +3291,7 @@ static void rtl8xxxu_phy_iqcalibrate(struct rtl8xxxu_priv *priv,
 	for (i = 0; i < retry; i++) {
 		path_a_ok = rtl8xxxu_iqk_path_a(priv);
 		if (path_a_ok == 0x03) {
+			dev_info(dev, "%s: Path A IQK success!\n", __func__);
 			val32 = rtl8xxxu_read32(priv,
 						REG_TX_POWER_BEFORE_IQK_A);
 			result[t][0] = (val32 >> 16) & 0x3ff;
@@ -3335,6 +3336,7 @@ static void rtl8xxxu_phy_iqcalibrate(struct rtl8xxxu_priv *priv,
 		for (i = 0; i < retry; i++) {
 			path_b_ok = rtl8xxxu_iqk_path_b(priv);
 			if (path_b_ok == 0x03) {
+				dev_info(dev, "%s: Path B IQK success!\n", __func__);
 				val32 = rtl8xxxu_read32(priv, REG_TX_POWER_BEFORE_IQK_B);
 				result[t][4] = (val32 >> 16) & 0x3ff;
 				val32 = rtl8xxxu_read32(priv, REG_TX_POWER_AFTER_IQK_B);
