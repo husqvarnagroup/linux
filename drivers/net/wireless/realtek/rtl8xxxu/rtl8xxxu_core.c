@@ -4924,6 +4924,10 @@ rtl8xxxu_bss_info_changed(struct ieee80211_hw *hw, struct ieee80211_vif *vif,
 	u32 val32;
 	u8 val8;
 
+	if (priv->regrcr != rtl8xxxu_read32(priv, REG_RCR)) {
+		pr_warn("REG_RCR corrupted in %s: 0x%x instead of 0x%x\n",
+			__func__, rtl8xxxu_read32(priv, REG_RCR), priv->regrcr);
+	}
 	rarpt = &priv->ra_report;
 
 	if (changed & BSS_CHANGED_ASSOC) {
@@ -6652,6 +6656,10 @@ static void rtl8xxxu_configure_filter(struct ieee80211_hw *hw,
 	struct rtl8xxxu_priv *priv = hw->priv;
 	u32 rcr = priv->regrcr;
 
+	if (priv->regrcr != rtl8xxxu_read32(priv, REG_RCR)) {
+		pr_warn("REG_RCR corrupted in %s: 0x%x instead of 0x%x\n",
+			__func__, rtl8xxxu_read32(priv, REG_RCR), priv->regrcr);
+	}
 	dev_dbg(&priv->udev->dev, "%s: changed_flags %08x, total_flags %08x\n",
 		__func__, changed_flags, *total_flags);
 
