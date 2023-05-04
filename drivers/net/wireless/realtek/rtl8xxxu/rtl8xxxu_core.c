@@ -5290,6 +5290,9 @@ rtl8xxxu_fill_txdesc_v1(struct ieee80211_hw *hw, struct ieee80211_hdr *hdr,
 	if (ieee80211_is_data_qos(hdr->frame_control))
 		tx_desc->txdw4 |= cpu_to_le32(TXDESC32_QOS);
 
+	if (tx_info->flags & IEEE80211_TX_CTL_ASSIGN_SEQ)
+		tx_desc->txdw4 |= cpu_to_le32(TXDESC32_HW_SEQ_ENABLE);
+
 	if (short_preamble)
 		tx_desc->txdw4 |= cpu_to_le32(TXDESC32_SHORT_PREAMBLE);
 
