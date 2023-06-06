@@ -776,10 +776,17 @@ static void ltdc_crtc_atomic_enable(struct drm_crtc *crtc,
 {
 	struct ltdc_device *ldev = crtc_to_ltdc(crtc);
 	struct drm_device *ddev = crtc->dev;
+	int ret;
 
 	DRM_DEBUG_DRIVER("\n");
 
-	pm_runtime_get_sync(ddev->dev);
+	if (!pm_runtime_active(ddev->dev)) {
+		ret = pm_runtime_get_sync(ddev->dev);
+		if (ret) {
+			DRM_ERROR("Failed to set mode, cannot get sync\n");
+			return;
+		}
+	}
 
 	/* Sets the background color value */
 	regmap_write(ldev->regmap, LTDC_BCCR, BCCR_BCBLACK);
@@ -817,7 +824,7 @@ static void ltdc_crtc_atomic_disable(struct drm_crtc *crtc,
 	if (!ldev->caps.plane_reg_shadow)
 		regmap_set_bits(ldev->regmap, LTDC_SRCR, SRCR_IMR);
 
-	pm_runtime_put_sync(ddev->dev);
+	pm_runtime_put_sync_suspend(ddev->dev);
 
 	/*  clear interrupt error counters */
 	mutex_lock(&ldev->err_lock);
@@ -978,8 +985,11 @@ static void ltdc_crtc_mode_set_nofb(struct drm_crtc *crtc)
 	if (bus_flags & DRM_BUS_FLAG_PIXDATA_DRIVE_NEGEDGE)
 		val |= GCR_PCPOL;
 
+	if (connector && connector->state->dithering == DRM_MODE_DITHERING_ON)
+		val |= GCR_DEN;
+
 	regmap_update_bits(ldev->regmap, LTDC_GCR,
-			   GCR_HSPOL | GCR_VSPOL | GCR_DEPOL | GCR_PCPOL, val);
+			   GCR_HSPOL | GCR_VSPOL | GCR_DEPOL | GCR_PCPOL | GCR_DEN, val);
 
 	/* Set Synchronization size */
 	val = (hsync << 16) | vsync;
@@ -1057,6 +1067,20 @@ static void ltdc_crtc_atomic_flush(struct drm_crtc *crtc,
 	}
 }
 
+static int ltdc_crtc_atomic_check(struct drm_crtc *crtc,
+				  struct drm_atomic_state *state)
+{
+	struct drm_crtc_state *crtc_state = drm_atomic_get_new_crtc_state(state, crtc);
+
+	DRM_DEBUG_ATOMIC("\n");
+
+	/* force a full mode set if active state changed */
+	if (crtc_state->active_changed)
+		crtc_state->mode_changed = true;
+
+	return 0;
+}
+
 static bool ltdc_crtc_get_scanout_position(struct drm_crtc *crtc,
 					   bool in_vblank_irq,
 					   int *vpos, int *hpos,
@@ -1117,6 +1141,7 @@ static const struct drm_crtc_helper_funcs ltdc_crtc_helper_funcs = {
 	.atomic_flush = ltdc_crtc_atomic_flush,
 	.atomic_enable = ltdc_crtc_atomic_enable,
 	.atomic_disable = ltdc_crtc_atomic_disable,
+	.atomic_check = ltdc_crtc_atomic_check,
 	.get_scanout_position = ltdc_crtc_get_scanout_position,
 };
 
@@ -1260,6 +1285,7 @@ static void ltdc_plane_atomic_update(struct drm_plane *plane,
 				     struct drm_atomic_state *state)
 {
 	struct ltdc_device *ldev = plane_to_ltdc(plane);
+	struct drm_device *ddev = plane->dev;
 	struct drm_plane_state *newstate = drm_atomic_get_new_plane_state(state,
 									  plane);
 	struct drm_framebuffer *fb = newstate->fb;
@@ -1289,6 +1315,9 @@ static void ltdc_plane_atomic_update(struct drm_plane *plane,
 			 src_w, src_h, src_x, src_y,
 			 newstate->crtc_w, newstate->crtc_h,
 			 newstate->crtc_x, newstate->crtc_y);
+
+	if (!pm_runtime_active(ddev->dev))
+		return;
 
 	regmap_read(ldev->regmap, LTDC_BPCR, &bpcr);
 
@@ -1508,7 +1537,11 @@ static void ltdc_plane_atomic_disable(struct drm_plane *plane,
 	struct drm_plane_state *oldstate = drm_atomic_get_old_plane_state(state,
 									  plane);
 	struct ltdc_device *ldev = plane_to_ltdc(plane);
+	struct drm_device *ddev = plane->dev;
 	u32 lofs = plane->index * LAY_OFS;
+
+	if (!pm_runtime_active(ddev->dev))
+		return;
 
 	/* Disable layer */
 	regmap_write_bits(ldev->regmap, LTDC_L1CR + lofs, LXCR_LEN | LXCR_CLUTEN |  LXCR_HMEN, 0);
@@ -1658,6 +1691,16 @@ static int ltdc_crtc_init(struct drm_device *ddev, struct drm_crtc *crtc)
 	int supported_rotations = DRM_MODE_ROTATE_0 | DRM_MODE_REFLECT_X | DRM_MODE_REFLECT_Y;
 	unsigned int i;
 	int ret;
+	struct drm_connector *connector = NULL;
+	struct drm_connector_list_iter iter;
+
+	/* Add the dithering property to all connectors */
+	drm_connector_list_iter_begin(ddev, &iter);
+	drm_for_each_connector_iter(connector, &iter)
+		drm_connector_attach_dithering_property(connector,
+							BIT(DRM_MODE_DITHERING_OFF) |
+							BIT(DRM_MODE_DITHERING_ON));
+	drm_connector_list_iter_end(&iter);
 
 	primary = ltdc_plane_create(ddev, DRM_PLANE_TYPE_PRIMARY, 0);
 	if (!primary) {
@@ -1923,7 +1966,6 @@ int ltdc_load(struct drm_device *ddev)
 	struct drm_panel *panel;
 	struct drm_crtc *crtc;
 	struct reset_control *rstc;
-	struct resource *res;
 	int irq, i, nb_endpoints;
 	int ret = -ENODEV;
 
@@ -1990,8 +2032,7 @@ int ltdc_load(struct drm_device *ddev)
 		reset_control_deassert(rstc);
 	}
 
-	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
-	ldev->regs = devm_ioremap_resource(dev, res);
+	ldev->regs = devm_platform_ioremap_resource(pdev, 0);
 	if (IS_ERR(ldev->regs)) {
 		DRM_ERROR("Unable to get ltdc registers\n");
 		ret = PTR_ERR(ldev->regs);
