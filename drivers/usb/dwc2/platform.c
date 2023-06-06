@@ -101,10 +101,16 @@ static int __dwc2_lowlevel_hw_enable(struct dwc2_hsotg *hsotg)
 	if (ret)
 		return ret;
 
+	if (hsotg->utmi_clk) {
+		ret = clk_prepare_enable(hsotg->utmi_clk);
+		if (ret)
+			goto err_dis_reg;
+	}
+
 	if (hsotg->clk) {
 		ret = clk_prepare_enable(hsotg->clk);
 		if (ret)
-			return ret;
+			goto err_dis_utmi_clk;
 	}
 
 	if (hsotg->uphy) {
@@ -113,9 +119,28 @@ static int __dwc2_lowlevel_hw_enable(struct dwc2_hsotg *hsotg)
 		ret = hsotg->plat->phy_init(pdev, hsotg->plat->phy_type);
 	} else {
 		ret = phy_init(hsotg->phy);
-		if (ret == 0)
+		if (ret == 0) {
 			ret = phy_power_on(hsotg->phy);
+			if (ret)
+				phy_exit(hsotg->phy);
+		}
 	}
+
+	if (ret)
+		goto err_dis_clk;
+
+	return 0;
+
+err_dis_clk:
+	if (hsotg->clk)
+		clk_disable_unprepare(hsotg->clk);
+
+err_dis_utmi_clk:
+	if (hsotg->utmi_clk)
+		clk_disable_unprepare(hsotg->utmi_clk);
+
+err_dis_reg:
+	regulator_bulk_disable(ARRAY_SIZE(hsotg->supplies), hsotg->supplies);
 
 	return ret;
 }
@@ -155,6 +180,9 @@ static int __dwc2_lowlevel_hw_disable(struct dwc2_hsotg *hsotg)
 
 	if (hsotg->clk)
 		clk_disable_unprepare(hsotg->clk);
+
+	if (hsotg->utmi_clk)
+		clk_disable_unprepare(hsotg->utmi_clk);
 
 	return regulator_bulk_disable(ARRAY_SIZE(hsotg->supplies), hsotg->supplies);
 }
@@ -231,6 +259,11 @@ static int dwc2_lowlevel_hw_init(struct dwc2_hsotg *hsotg)
 	hsotg->clk = devm_clk_get_optional(hsotg->dev, "otg");
 	if (IS_ERR(hsotg->clk))
 		return dev_err_probe(hsotg->dev, PTR_ERR(hsotg->clk), "cannot get otg clock\n");
+
+	hsotg->utmi_clk = devm_clk_get_optional(hsotg->dev, "utmi");
+	if (IS_ERR(hsotg->utmi_clk))
+		return dev_err_probe(hsotg->dev, PTR_ERR(hsotg->utmi_clk),
+				     "cannot get utmi clock\n");
 
 	/* Regulators */
 	for (i = 0; i < ARRAY_SIZE(hsotg->supplies); i++)
@@ -606,8 +639,19 @@ static int __maybe_unused dwc2_suspend(struct device *dev)
 	bool is_device_mode = dwc2_is_device_mode(dwc2);
 	int ret = 0;
 
-	if (is_device_mode)
+	if (is_device_mode) {
+		/*
+		 * Handle the case when bus has been suspended prior to platform suspend.
+		 * As the lx_state is DWC2_L2, dwc2_hsotg_suspend() is then a no-op.
+		 * So need to exit clock gating first, so the gadget can be suspended and
+		 * resumed later on.
+		 */
+		if (dwc2->params.power_down == DWC2_POWER_DOWN_PARAM_NONE &&
+		    dwc2->bus_suspended)
+			dwc2_gadget_exit_clock_gating(dwc2, 0);
+
 		dwc2_hsotg_suspend(dwc2);
+	}
 
 	dwc2_drd_suspend(dwc2);
 
@@ -648,6 +692,9 @@ static int __maybe_unused dwc2_suspend(struct device *dev)
 		dwc2->phy_off_for_suspend = true;
 	}
 
+	if (device_may_wakeup(dev) || device_wakeup_path(dev))
+		enable_irq_wake(dwc2->irq);
+
 	return ret;
 }
 
@@ -655,6 +702,9 @@ static int __maybe_unused dwc2_resume(struct device *dev)
 {
 	struct dwc2_hsotg *dwc2 = dev_get_drvdata(dev);
 	int ret = 0;
+
+	if (device_may_wakeup(dev) || device_wakeup_path(dev))
+		disable_irq_wake(dwc2->irq);
 
 	if (dwc2->phy_off_for_suspend && dwc2->ll_hw_enabled) {
 		ret = __dwc2_lowlevel_hw_enable(dwc2);

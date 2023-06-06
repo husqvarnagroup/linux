@@ -1701,7 +1701,8 @@ static void dwc2_hcd_cleanup_channels(struct dwc2_hsotg *hsotg)
 		 * release_channel_ddma(), which is called from ep_disable when
 		 * device disconnects
 		 */
-		channel->qh = NULL;
+		if (hsotg->params.host_dma && hsotg->params.dma_desc_enable)
+			channel->qh = NULL;
 	}
 	/* All channels have been freed, mark them available */
 	if (hsotg->params.uframe_sched) {
@@ -3614,7 +3615,8 @@ static int dwc2_hcd_hub_control(struct dwc2_hsotg *hsotg, u16 typereq,
 		if (wvalue != USB_PORT_FEAT_TEST && (!windex || windex > 1))
 			goto error;
 
-		if (!hsotg->flags.b.port_connect_status) {
+		if (!hsotg->flags.b.port_connect_status &&
+		    !dwc2_is_host_mode(hsotg)) {
 			/*
 			 * The port is disconnected, which means the core is
 			 * either in device mode or it soon will be. Just
@@ -3716,6 +3718,7 @@ static int dwc2_hcd_hub_control(struct dwc2_hsotg *hsotg, u16 typereq,
 			hprt0 &= ~HPRT0_TSTCTL_MASK;
 			hprt0 |= (windex >> 8) << HPRT0_TSTCTL_SHIFT;
 			dwc2_writel(hsotg, hprt0, HPRT0);
+			hsotg->test_mode = windex >> 8;
 			break;
 
 		default:
@@ -4260,9 +4263,11 @@ static int _dwc2_hcd_start(struct usb_hcd *hcd)
 		return 0;	/* why 0 ?? */
 	}
 
+	hprt0 = dwc2_read_hprt0(hsotg);
+
 	dwc2_hcd_reinit(hsotg);
 
-	hprt0 = dwc2_read_hprt0(hsotg);
+	hprt0 ^= dwc2_read_hprt0(hsotg);
 	/* Has vbus power been turned on in dwc2_core_host_init ? */
 	if (hprt0 & HPRT0_PWR) {
 		/* Enable external vbus supply before resuming root hub */
@@ -4371,6 +4376,7 @@ static int _dwc2_hcd_suspend(struct usb_hcd *hcd)
 		 * clock gating is used to save power.
 		 */
 		if (!hsotg->params.no_clock_gating) {
+			dwc2_disable_global_interrupts(hsotg);
 			dwc2_host_enter_clock_gating(hsotg);
 
 			/* After entering suspend, hardware is not accessible */
@@ -4380,10 +4386,6 @@ static int _dwc2_hcd_suspend(struct usb_hcd *hcd)
 	default:
 		goto skip_power_saving;
 	}
-
-	spin_unlock_irqrestore(&hsotg->lock, flags);
-	dwc2_vbus_supply_exit(hsotg);
-	spin_lock_irqsave(&hsotg->lock, flags);
 
 	/* Ask phy to be suspended */
 	if (!IS_ERR_OR_NULL(hsotg->uphy)) {
@@ -4415,20 +4417,20 @@ static int _dwc2_hcd_resume(struct usb_hcd *hcd)
 	if (hsotg->lx_state != DWC2_L2)
 		goto unlock;
 
-	hprt0 = dwc2_read_hprt0(hsotg);
-
-	/*
-	 * Added port connection status checking which prevents exiting from
-	 * Partial Power Down mode from _dwc2_hcd_resume() if not in Partial
-	 * Power Down mode.
-	 */
-	if (hprt0 & HPRT0_CONNSTS) {
-		hsotg->lx_state = DWC2_L0;
-		goto unlock;
-	}
-
 	switch (hsotg->params.power_down) {
 	case DWC2_POWER_DOWN_PARAM_PARTIAL:
+		hprt0 = dwc2_read_hprt0(hsotg);
+
+		/*
+		 * Added port connection status checking which prevents exiting from
+		 * Partial Power Down mode from _dwc2_hcd_resume() if not in Partial
+		 * Power Down mode.
+		 */
+		if (hprt0 & HPRT0_CONNSTS) {
+			hsotg->lx_state = DWC2_L0;
+			goto unlock;
+		}
+
 		ret = dwc2_exit_partial_power_down(hsotg, 0, true);
 		if (ret)
 			dev_err(hsotg->dev,
@@ -4463,7 +4465,6 @@ static int _dwc2_hcd_resume(struct usb_hcd *hcd)
 		 * the global interrupts are disabled.
 		 */
 		dwc2_core_init(hsotg, false);
-		dwc2_enable_global_interrupts(hsotg);
 		dwc2_hcd_reinit(hsotg);
 		spin_lock_irqsave(&hsotg->lock, flags);
 
@@ -4472,14 +4473,13 @@ static int _dwc2_hcd_resume(struct usb_hcd *hcd)
 		 * since an interrupt may rise.
 		 */
 		set_bit(HCD_FLAG_HW_ACCESSIBLE, &hcd->flags);
+		dwc2_enable_global_interrupts(hsotg);
+
 		break;
 	default:
 		hsotg->lx_state = DWC2_L0;
 		goto unlock;
 	}
-
-	/* Change Root port status, as port status change occurred after resume.*/
-	hsotg->flags.b.port_suspend_change = 1;
 
 	/*
 	 * Enable power if not already done.
@@ -4492,10 +4492,7 @@ static int _dwc2_hcd_resume(struct usb_hcd *hcd)
 		spin_lock_irqsave(&hsotg->lock, flags);
 	}
 
-	/* Enable external vbus supply after resuming the port. */
 	spin_unlock_irqrestore(&hsotg->lock, flags);
-	dwc2_vbus_supply_init(hsotg);
-
 	/* Wait for controller to correctly update D+/D- level */
 	usleep_range(3000, 5000);
 	spin_lock_irqsave(&hsotg->lock, flags);
