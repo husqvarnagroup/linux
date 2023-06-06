@@ -81,13 +81,11 @@ static struct mfd_cell stmfx_cells[] = {
 		.num_resources = ARRAY_SIZE(stmfx_pinctrl_resources),
 	},
 	{
-		.of_compatible = "st,stmfx-0300-idd",
 		.name = "stmfx-idd",
 		.resources = stmfx_idd_resources,
 		.num_resources = ARRAY_SIZE(stmfx_idd_resources),
 	},
 	{
-		.of_compatible = "st,stmfx-0300-ts",
 		.name = "stmfx-ts",
 		.resources = stmfx_ts_resources,
 		.num_resources = ARRAY_SIZE(stmfx_ts_resources),
@@ -306,6 +304,21 @@ irq_exit:
 	return ret;
 }
 
+static int stmfx_chip_wait_boot(struct stmfx *stmfx)
+{
+	unsigned long timeout_ms = 0;
+	unsigned int val;
+	int ret;
+
+	while (1) {
+		ret = regmap_read(stmfx->map, STMFX_REG_FW_VERSION_MSB, &val);
+		if (ret != -ENXIO || timeout_ms > STMFX_BOOT_TIME_MS)
+			return ret;
+		mdelay(1);
+		timeout_ms++;
+	}
+}
+
 static int stmfx_chip_reset(struct stmfx *stmfx)
 {
 	int ret;
@@ -330,9 +343,8 @@ static int stmfx_chip_init(struct i2c_client *client)
 	stmfx->vdd = devm_regulator_get_optional(&client->dev, "vdd");
 	ret = PTR_ERR_OR_ZERO(stmfx->vdd);
 	if (ret) {
-		if (ret == -ENODEV)
-			stmfx->vdd = NULL;
-		else
+		stmfx->vdd = NULL;
+		if (ret != -ENODEV)
 			return dev_err_probe(&client->dev, ret, "Failed to get VDD regulator\n");
 	}
 
@@ -342,6 +354,11 @@ static int stmfx_chip_init(struct i2c_client *client)
 			dev_err(&client->dev, "VDD enable failed: %d\n", ret);
 			return ret;
 		}
+	}
+	ret = stmfx_chip_wait_boot(stmfx);
+	if (ret) {
+		dev_err(stmfx->dev, "Boot chip failed: %d\n", ret);
+		return ret;
 	}
 
 	ret = regmap_read(stmfx->map, STMFX_REG_CHIP_ID, &id);
@@ -387,7 +404,7 @@ static int stmfx_chip_init(struct i2c_client *client)
 
 err:
 	if (stmfx->vdd)
-		return regulator_disable(stmfx->vdd);
+		regulator_disable(stmfx->vdd);
 
 	return ret;
 }
@@ -451,6 +468,10 @@ static int stmfx_probe(struct i2c_client *client,
 	if (ret)
 		goto err_chip_exit;
 
+	/* Parent I2C controller could use DMA, STMFX and child devices do not */
+	dev->coherent_dma_mask = 0;
+	dev->dma_mask = &dev->coherent_dma_mask;
+
 	ret = devm_mfd_add_devices(dev, PLATFORM_DEVID_NONE,
 				   stmfx_cells, ARRAY_SIZE(stmfx_cells), NULL,
 				   0, stmfx->irq_domain);
@@ -511,6 +532,11 @@ static int stmfx_resume(struct device *dev)
 				"VDD enable failed: %d\n", ret);
 			return ret;
 		}
+	}
+	ret = stmfx_chip_wait_boot(stmfx);
+	if (ret) {
+		dev_err(stmfx->dev, "Boot chip failed: %d\n", ret);
+		return ret;
 	}
 
 	/* Reset STMFX - supply has been stopped during suspend */
