@@ -3411,6 +3411,16 @@ int uart_get_rs485_mode(struct uart_port *port)
 	u32 rs485_delay[2];
 	int ret;
 
+	ret = device_property_read_u32_array(dev, "rs485-rts-delay-ns",
+					     rs485_delay, 2);
+	if (!ret) {
+		rs485conf->delay_rts_before_send_ns = rs485_delay[0];
+		rs485conf->delay_rts_after_send_ns = rs485_delay[1];
+	} else {
+		rs485conf->delay_rts_before_send_ns = 0;
+		rs485conf->delay_rts_after_send_ns = 0;
+	}
+
 	ret = device_property_read_u32_array(dev, "rs485-rts-delay",
 					     rs485_delay, 2);
 	if (!ret) {
@@ -3464,10 +3474,10 @@ EXPORT_SYMBOL_GPL(uart_get_rs485_mode);
 
 /* Compile-time assertions for serial_rs485 layout */
 static_assert(offsetof(struct serial_rs485, padding) ==
-              (offsetof(struct serial_rs485, delay_rts_after_send) + sizeof(__u32)));
+	      (offsetof(struct serial_rs485, delay_rts_after_send_ns) + sizeof(__u32)));
 static_assert(offsetof(struct serial_rs485, padding1) ==
 	      offsetof(struct serial_rs485, padding[1]));
-static_assert((offsetof(struct serial_rs485, padding[4]) + sizeof(__u32)) ==
+static_assert((offsetof(struct serial_rs485, padding[2]) + sizeof(__u32)) ==
 	      sizeof(struct serial_rs485));
 
 MODULE_DESCRIPTION("Serial driver core");
