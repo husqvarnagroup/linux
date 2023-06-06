@@ -114,6 +114,7 @@ struct dcmi_buf {
 	struct vb2_v4l2_buffer	vb;
 	bool			prepared;
 	struct sg_table		sgt;
+	struct dma_async_tx_descriptor *dma_desc;
 	size_t			size;
 	struct list_head	list;
 };
@@ -300,55 +301,12 @@ static void dcmi_dma_callback(void *param)
 static int dcmi_start_dma(struct stm32_dcmi *dcmi,
 			  struct dcmi_buf *buf)
 {
-	struct dma_async_tx_descriptor *desc = NULL;
-	struct dma_slave_config config;
-	int ret;
-
-	memset(&config, 0, sizeof(config));
-
-	config.src_addr = (dma_addr_t)dcmi->res->start + DCMI_DR;
-	config.src_addr_width = DMA_SLAVE_BUSWIDTH_4_BYTES;
-	config.dst_addr_width = DMA_SLAVE_BUSWIDTH_4_BYTES;
-	config.dst_maxburst = 4;
-
-	/* Configure DMA channel */
-	ret = dmaengine_slave_config(dcmi->dma_chan, &config);
-	if (ret < 0) {
-		dev_err(dcmi->dev, "%s: DMA channel config failed (%d)\n",
-			__func__, ret);
-		return ret;
-	}
-
-	/*
-	 * Avoid call of dmaengine_terminate_sync() between
-	 * dmaengine_prep_slave_single() and dmaengine_submit()
-	 * by locking the whole DMA submission sequence
-	 */
-	mutex_lock(&dcmi->dma_lock);
-
-	/* Prepare a DMA transaction */
-	desc = dmaengine_prep_slave_sg(dcmi->dma_chan, buf->sgt.sgl, buf->sgt.nents,
-				       DMA_DEV_TO_MEM,
-				       DMA_PREP_INTERRUPT);
-	if (!desc) {
-		dev_err(dcmi->dev, "%s: DMA dmaengine_prep_slave_sg failed\n", __func__);
-		mutex_unlock(&dcmi->dma_lock);
-		return -EINVAL;
-	}
-
-	/* Set completion callback routine for notification */
-	desc->callback = dcmi_dma_callback;
-	desc->callback_param = dcmi;
-
 	/* Push current DMA transaction in the pending queue */
-	dcmi->dma_cookie = dmaengine_submit(desc);
+	dcmi->dma_cookie = dmaengine_submit(buf->dma_desc);
 	if (dma_submit_error(dcmi->dma_cookie)) {
 		dev_err(dcmi->dev, "%s: DMA submission failed\n", __func__);
-		mutex_unlock(&dcmi->dma_lock);
 		return -ENXIO;
 	}
-
-	mutex_unlock(&dcmi->dma_lock);
 
 	dma_async_issue_pending(dcmi->dma_chan);
 
@@ -447,9 +405,21 @@ static irqreturn_t dcmi_irq_thread(int irq, void *arg)
 	spin_lock_irq(&dcmi->irqlock);
 
 	if (dcmi->misr & IT_OVR) {
+		/* Disable capture */
+		reg_clear(dcmi->regs, DCMI_CR, CR_CAPTURE);
+
 		dcmi->overrun_count++;
+
 		if (dcmi->overrun_count > OVERRUN_ERROR_THRESHOLD)
 			dcmi->errors_count++;
+
+		spin_unlock_irq(&dcmi->irqlock);
+		dmaengine_terminate_sync(dcmi->dma_chan);
+
+		if (dcmi_restart_capture(dcmi))
+			dev_err(dcmi->dev, "%s: Cannot restart capture\n", __func__);
+
+		return IRQ_HANDLED;
 	}
 	if (dcmi->misr & IT_ERR)
 		dcmi->errors_count++;
@@ -564,12 +534,52 @@ static int dcmi_buf_prepare(struct vb2_buffer *vb)
 			size -= bytes;
 		}
 
+		/* Prepare a DMA transaction */
+		buf->dma_desc = dmaengine_prep_slave_sg(dcmi->dma_chan, buf->sgt.sgl,
+							buf->sgt.nents, DMA_DEV_TO_MEM,
+							DMA_PREP_INTERRUPT);
+		if (!buf->dma_desc) {
+			dev_err(dcmi->dev, "%s: DMA dmaengine_prep_slave_sg failed\n", __func__);
+			sg_free_table(&buf->sgt);
+			return -EIO;
+		}
+
+		/* Set completion callback routine for notification */
+		buf->dma_desc->callback = dcmi_dma_callback;
+		buf->dma_desc->callback_param = dcmi;
+
+		/* Mark the descriptor as reusable to avoid having to prepare it */
+		ret = dmaengine_desc_set_reuse(buf->dma_desc);
+		if (ret) {
+			dev_err(dcmi->dev, "%s: DMA dmaengine_desc_set_reuse failed\n", __func__);
+			dmaengine_desc_free(buf->dma_desc);
+			sg_free_table(&buf->sgt);
+			return -EIO;
+		}
+
 		buf->prepared = true;
 
 		vb2_set_plane_payload(&buf->vb.vb2_buf, 0, buf->size);
 	}
 
 	return 0;
+}
+
+static void dcmi_buf_cleanup(struct vb2_buffer *vb)
+{
+	struct stm32_dcmi *dcmi =  vb2_get_drv_priv(vb->vb2_queue);
+	struct vb2_v4l2_buffer *vbuf = to_vb2_v4l2_buffer(vb);
+	struct dcmi_buf *buf = container_of(vbuf, struct dcmi_buf, vb);
+	int ret;
+
+	if (!buf->prepared)
+		return;
+
+	ret = dmaengine_desc_free(buf->dma_desc);
+	if (ret)
+		dev_err(dcmi->dev, "%s: Failed to free the mdma descriptor (0x%x)\n",
+			__func__, ret);
+	sg_free_table(&buf->sgt);
 }
 
 static void dcmi_buf_queue(struct vb2_buffer *vb)
@@ -933,6 +943,7 @@ static const struct vb2_ops dcmi_video_qops = {
 	.queue_setup		= dcmi_queue_setup,
 	.buf_init		= dcmi_buf_init,
 	.buf_prepare		= dcmi_buf_prepare,
+	.buf_cleanup		= dcmi_buf_cleanup,
 	.buf_queue		= dcmi_buf_queue,
 	.start_streaming	= dcmi_start_streaming,
 	.stop_streaming		= dcmi_stop_streaming,
@@ -1931,6 +1942,7 @@ static int dcmi_probe(struct platform_device *pdev)
 	struct vb2_queue *q;
 	struct dma_chan *chan;
 	struct dma_slave_caps caps;
+	struct dma_slave_config dma_config;
 	struct clk *mclk;
 	int irq;
 	int ret = 0;
@@ -1946,12 +1958,9 @@ static int dcmi_probe(struct platform_device *pdev)
 		return -ENOMEM;
 
 	dcmi->rstc = devm_reset_control_get_exclusive(&pdev->dev, NULL);
-	if (IS_ERR(dcmi->rstc)) {
-		if (PTR_ERR(dcmi->rstc) != -EPROBE_DEFER)
-			dev_err(&pdev->dev, "Could not get reset control\n");
-
-		return PTR_ERR(dcmi->rstc);
-	}
+	if (IS_ERR(dcmi->rstc))
+		return dev_err_probe(&pdev->dev, PTR_ERR(dcmi->rstc),
+				     "Could not get reset control\n");
 
 	/* Get bus characteristics from devicetree */
 	np = of_graph_get_next_endpoint(np, NULL);
@@ -2003,25 +2012,30 @@ static int dcmi_probe(struct platform_device *pdev)
 	}
 
 	mclk = devm_clk_get(&pdev->dev, "mclk");
-	if (IS_ERR(mclk)) {
-		if (PTR_ERR(mclk) != -EPROBE_DEFER)
-			dev_err(&pdev->dev, "Unable to get mclk\n");
-		return PTR_ERR(mclk);
-	}
+	if (IS_ERR(mclk))
+		return dev_err_probe(&pdev->dev, PTR_ERR(mclk), "Unable to get mclk\n");
 
 	chan = dma_request_chan(&pdev->dev, "tx");
-	if (IS_ERR(chan)) {
-		ret = PTR_ERR(chan);
-		if (ret != -EPROBE_DEFER)
-			dev_err(&pdev->dev,
-				"Failed to request DMA channel: %d\n", ret);
-		return ret;
-	}
+	if (IS_ERR(chan))
+		return dev_err_probe(&pdev->dev, PTR_ERR(chan), "Failed to request DMA channel\n");
 
 	dcmi->dma_max_burst = UINT_MAX;
 	ret = dma_get_slave_caps(chan, &caps);
 	if (!ret && caps.max_sg_burst)
 		dcmi->dma_max_burst = caps.max_sg_burst	* DMA_SLAVE_BUSWIDTH_4_BYTES;
+
+	memset(&dma_config, 0, sizeof(dma_config));
+
+	dma_config.src_addr = (dma_addr_t)dcmi->res->start + DCMI_DR;
+	dma_config.src_addr_width = DMA_SLAVE_BUSWIDTH_4_BYTES;
+
+	/* Configure DMA channel */
+	ret = dmaengine_slave_config(chan, &dma_config);
+	if (ret < 0) {
+		dev_err(dcmi->dev, "%s: DMA channel config failed (%d)\n",
+			__func__, ret);
+		goto err_dma_slave_config;
+	}
 
 	spin_lock_init(&dcmi->irqlock);
 	mutex_init(&dcmi->lock);
@@ -2140,6 +2154,7 @@ err_device_unregister:
 	v4l2_device_unregister(&dcmi->v4l2_dev);
 err_media_device_cleanup:
 	media_device_cleanup(&dcmi->mdev);
+err_dma_slave_config:
 	dma_release_channel(dcmi->dma_chan);
 
 	return ret;
@@ -2162,7 +2177,7 @@ static int dcmi_remove(struct platform_device *pdev)
 	return 0;
 }
 
-static __maybe_unused int dcmi_runtime_suspend(struct device *dev)
+static int dcmi_runtime_suspend(struct device *dev)
 {
 	struct stm32_dcmi *dcmi = dev_get_drvdata(dev);
 
@@ -2171,7 +2186,7 @@ static __maybe_unused int dcmi_runtime_suspend(struct device *dev)
 	return 0;
 }
 
-static __maybe_unused int dcmi_runtime_resume(struct device *dev)
+static int dcmi_runtime_resume(struct device *dev)
 {
 	struct stm32_dcmi *dcmi = dev_get_drvdata(dev);
 	int ret;
@@ -2183,7 +2198,7 @@ static __maybe_unused int dcmi_runtime_resume(struct device *dev)
 	return ret;
 }
 
-static __maybe_unused int dcmi_suspend(struct device *dev)
+static int dcmi_suspend(struct device *dev)
 {
 	/* disable clock */
 	pm_runtime_force_suspend(dev);
@@ -2194,7 +2209,7 @@ static __maybe_unused int dcmi_suspend(struct device *dev)
 	return 0;
 }
 
-static __maybe_unused int dcmi_resume(struct device *dev)
+static int dcmi_resume(struct device *dev)
 {
 	/* restore pinctl default state */
 	pinctrl_pm_select_default_state(dev);
@@ -2217,7 +2232,7 @@ static struct platform_driver stm32_dcmi_driver = {
 	.driver		= {
 		.name = DRV_NAME,
 		.of_match_table = of_match_ptr(stm32_dcmi_of_match),
-		.pm = &dcmi_pm_ops,
+		.pm = pm_sleep_ptr(&dcmi_pm_ops),
 	},
 };
 
