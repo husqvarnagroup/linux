@@ -1170,6 +1170,13 @@ int tee_client_close_session(struct tee_context *ctx, u32 session)
 }
 EXPORT_SYMBOL_GPL(tee_client_close_session);
 
+int tee_client_system_session(struct tee_context *ctx, unsigned int session)
+{
+	if (!ctx->teedev->desc->ops->system_session)
+		return -EINVAL;
+	return ctx->teedev->desc->ops->system_session(ctx, session);
+}
+
 int tee_client_invoke_func(struct tee_context *ctx,
 			   struct tee_ioctl_invoke_arg *arg,
 			   struct tee_param *param)
@@ -1179,6 +1186,18 @@ int tee_client_invoke_func(struct tee_context *ctx,
 	return ctx->teedev->desc->ops->invoke_func(ctx, arg, param);
 }
 EXPORT_SYMBOL_GPL(tee_client_invoke_func);
+
+int tee_client_invoke_func_ocall2(struct tee_context *ctx,
+				  struct tee_ioctl_invoke_arg *arg,
+				  struct tee_param *param,
+				  struct tee_ocall2_arg *ocall_arg)
+{
+	if (!ctx->teedev->desc->ops->invoke_func_ocall2)
+		return -EINVAL;
+	return ctx->teedev->desc->ops->invoke_func_ocall2(ctx, arg, param,
+							  ocall_arg);
+}
+EXPORT_SYMBOL_GPL(tee_client_invoke_func_ocall2);
 
 int tee_client_cancel_req(struct tee_context *ctx,
 			  struct tee_ioctl_cancel_arg *arg)

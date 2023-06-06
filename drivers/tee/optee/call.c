@@ -120,8 +120,8 @@ void optee_cq_wait_final(struct optee_call_queue *cq,
 }
 
 /* Requires the filpstate mutex to be held */
-static struct optee_session *find_session(struct optee_context_data *ctxdata,
-					  u32 session_id)
+struct optee_session *optee_find_session(struct optee_context_data *ctxdata,
+					 u32 session_id)
 {
 	struct optee_session *sess;
 
@@ -328,7 +328,7 @@ int optee_open_session(struct tee_context *ctx,
 		goto out;
 	}
 
-	if (optee->ops->do_call_with_arg(ctx, shm, offs)) {
+	if (optee->ops->do_call_with_arg(ctx, shm, offs, NULL)) {
 		msg_arg->ret = TEEC_ERROR_COMMUNICATION;
 		msg_arg->ret_origin = TEEC_ORIGIN_COMMS;
 	}
@@ -360,21 +360,30 @@ out:
 	return rc;
 }
 
-int optee_close_session_helper(struct tee_context *ctx, u32 session)
+int optee_close_session_helper(struct tee_context *ctx,
+			       struct optee_session *sess)
 {
 	struct optee *optee = tee_get_drvdata(ctx->teedev);
 	struct optee_shm_arg_entry *entry;
+	struct optee_call_extra call_ctx;
 	struct optee_msg_arg *msg_arg;
 	struct tee_shm *shm;
 	u_int offs;
+
+	if (WARN_ONCE(sess->ocall_ctx.thread_p1, "Can't close, on going Ocall\n"))
+		return -EINVAL;
 
 	msg_arg = optee_get_msg_arg(ctx, 0, &entry, &shm, &offs);
 	if (IS_ERR(msg_arg))
 		return PTR_ERR(msg_arg);
 
 	msg_arg->cmd = OPTEE_MSG_CMD_CLOSE_SESSION;
-	msg_arg->session = session;
-	optee->ops->do_call_with_arg(ctx, shm, offs);
+	msg_arg->session = sess->session_id;
+
+	memset(&call_ctx, 0, sizeof(call_ctx));
+	call_ctx.system = sess->system;
+
+	optee->ops->do_call_with_arg(ctx, shm, offs, &call_ctx);
 
 	optee_free_msg_arg(ctx, entry, offs);
 
@@ -385,43 +394,88 @@ int optee_close_session(struct tee_context *ctx, u32 session)
 {
 	struct optee_context_data *ctxdata = ctx->data;
 	struct optee_session *sess;
+	int rc;
 
 	/* Check that the session is valid and remove it from the list */
 	mutex_lock(&ctxdata->mutex);
-	sess = find_session(ctxdata, session);
-	if (sess)
+	sess = optee_find_session(ctxdata, session);
+	if (sess && !sess->ocall_ctx.thread_p1)
 		list_del(&sess->list_node);
 	mutex_unlock(&ctxdata->mutex);
 	if (!sess)
 		return -EINVAL;
+	if (WARN_ONCE(sess->ocall_ctx.thread_p1, "Can't close, on going Ocall\n"))
+		return -EINVAL;
+
+	rc = optee_close_session_helper(ctx, sess);
 	kfree(sess);
 
-	return optee_close_session_helper(ctx, session);
+	return rc;
 }
 
 int optee_invoke_func(struct tee_context *ctx, struct tee_ioctl_invoke_arg *arg,
 		      struct tee_param *param)
 {
+	return optee_invoke_func_helper(ctx, arg, param, NULL);
+}
+
+int optee_invoke_func_helper(struct tee_context *ctx,
+			     struct tee_ioctl_invoke_arg *arg,
+			     struct tee_param *param,
+			     struct tee_ocall2_arg *ocall_arg)
+{
 	struct optee *optee = tee_get_drvdata(ctx->teedev);
 	struct optee_context_data *ctxdata = ctx->data;
 	struct optee_shm_arg_entry *entry;
+	struct optee_call_extra call_extra;
 	struct optee_msg_arg *msg_arg;
 	struct optee_session *sess;
 	struct tee_shm *shm;
 	u_int offs;
 	int rc;
+	u32 session_id;
+
+	if (tee_ocall_in_progress(ocall_arg))
+		session_id = ocall_arg->session;
+	else
+		session_id = arg->session;
 
 	/* Check that the session is valid */
 	mutex_lock(&ctxdata->mutex);
-	sess = find_session(ctxdata, arg->session);
+	sess = optee_find_session(ctxdata, session_id);
 	mutex_unlock(&ctxdata->mutex);
 	if (!sess)
 		return -EINVAL;
+	if (tee_ocall_in_progress(ocall_arg) && !sess->ocall_ctx.thread_p1) {
+		pr_err("Unexpected return from Ocall for the session\n");
+		return -EINVAL;
+	}
+	if (!tee_ocall_is_used(ocall_arg) && sess->ocall_ctx.thread_p1) {
+		pr_err("Session is busy with an on-going Ocall\n");
+		return -EINVAL;
+	}
 
+	/* Setup TEE call extra data  */
+	memset(&call_extra, 0, sizeof(call_extra));
+	call_extra.system = sess->system;
+
+	if (tee_ocall_is_used(ocall_arg)) {
+		call_extra.ocall_arg = ocall_arg;
+		call_extra.ocall_call_waiter = &sess->ocall_ctx.call_waiter;
+	}
+
+	if (tee_ocall_in_progress(ocall_arg)) {
+		call_extra.tee_thread_id = sess->ocall_ctx.thread_p1 - 1;
+		/* Skip shared memory buffer part, not needed with ocall2 */
+		goto do_call;
+	}
+
+	/* Get a shared memory buffer for the message */
 	msg_arg = optee_get_msg_arg(ctx, arg->num_params,
 				    &entry, &shm, &offs);
 	if (IS_ERR(msg_arg))
 		return PTR_ERR(msg_arg);
+
 	msg_arg->cmd = OPTEE_MSG_CMD_INVOKE_COMMAND;
 	msg_arg->func = arg->func;
 	msg_arg->session = arg->session;
@@ -432,7 +486,55 @@ int optee_invoke_func(struct tee_context *ctx, struct tee_ioctl_invoke_arg *arg,
 	if (rc)
 		goto out;
 
-	if (optee->ops->do_call_with_arg(ctx, shm, offs)) {
+	if (tee_ocall_is_used(ocall_arg)) {
+		/* Save initial call context in ocall context */
+		memcpy(&sess->ocall_ctx.call_arg, arg, sizeof(*arg));
+		sess->ocall_ctx.msg_arg = msg_arg;
+		sess->ocall_ctx.msg_entry = entry;
+		sess->ocall_ctx.msg_offs = offs;
+	}
+
+do_call:
+	rc = optee->ops->do_call_with_arg(ctx, shm, offs, &call_extra);
+
+	if (rc == -EAGAIN) {
+		/* We are executing an Ocall request from TEE */
+		if (tee_ocall_in_progress(ocall_arg)) {
+			mutex_lock(&ctxdata->mutex);
+			ocall_arg->session = session_id;
+			sess->ocall_ctx.thread_p1 = call_extra.tee_thread_id + 1;
+			mutex_unlock(&ctxdata->mutex);
+
+			return 0;
+		}
+		WARN_ONCE(1, "optee: unexpected ocall\n");
+	}
+
+	/* Session may be leaving an Ocall */
+	mutex_lock(&ctxdata->mutex);
+	sess->ocall_ctx.thread_p1 = 0;
+
+	if (tee_ocall_is_used(ocall_arg)) {
+		/* We are returning from initial call, get initial call msg */
+		msg_arg = sess->ocall_ctx.msg_arg;
+		entry = sess->ocall_ctx.msg_entry;
+		offs = sess->ocall_ctx.msg_offs;
+		if (arg) {
+			unsigned int num_params = arg->num_params;
+
+			memcpy(arg, &sess->ocall_ctx.call_arg, sizeof(*arg));
+			if (num_params < sess->ocall_ctx.call_arg.num_params) {
+				arg->num_params = 0;
+				rc = -EINVAL;
+			}
+		}
+
+		/* Wipe Ocall context deprecated information */
+		memset(&sess->ocall_ctx, 0, sizeof(sess->ocall_ctx));
+	}
+	mutex_unlock(&ctxdata->mutex);
+
+	if (rc) {
 		msg_arg->ret = TEEC_ERROR_COMMUNICATION;
 		msg_arg->ret_origin = TEEC_ORIGIN_COMMS;
 	}
@@ -462,9 +564,11 @@ int optee_cancel_req(struct tee_context *ctx, u32 cancel_id, u32 session)
 
 	/* Check that the session is valid */
 	mutex_lock(&ctxdata->mutex);
-	sess = find_session(ctxdata, session);
+	sess = optee_find_session(ctxdata, session);
 	mutex_unlock(&ctxdata->mutex);
 	if (!sess)
+		return -EINVAL;
+	if (WARN_ONCE(sess->ocall_ctx.thread_p1, "Can't cancel, on going Ocall\n"))
 		return -EINVAL;
 
 	msg_arg = optee_get_msg_arg(ctx, 0, &entry, &shm, &offs);
@@ -474,7 +578,7 @@ int optee_cancel_req(struct tee_context *ctx, u32 cancel_id, u32 session)
 	msg_arg->cmd = OPTEE_MSG_CMD_CANCEL;
 	msg_arg->session = session;
 	msg_arg->cancel_id = cancel_id;
-	optee->ops->do_call_with_arg(ctx, shm, offs);
+	optee->ops->do_call_with_arg(ctx, shm, offs, NULL);
 
 	optee_free_msg_arg(ctx, entry, offs);
 	return 0;
