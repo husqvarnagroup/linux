@@ -1725,6 +1725,7 @@ int security_path_rmdir(const struct path *dir, struct dentry *dentry)
 		return 0;
 	return call_int_hook(path_rmdir, 0, dir, dentry);
 }
+EXPORT_SYMBOL_GPL(security_path_rmdir);
 
 /**
  * security_path_unlink() - Check if removing a hard link is allowed
@@ -1760,6 +1761,7 @@ int security_path_symlink(const struct path *dir, struct dentry *dentry,
 		return 0;
 	return call_int_hook(path_symlink, 0, dir, dentry, old_name);
 }
+EXPORT_SYMBOL_GPL(security_path_symlink);
 
 /**
  * security_path_link - Check if creating a hard link is allowed
@@ -1778,6 +1780,7 @@ int security_path_link(struct dentry *old_dentry, const struct path *new_dir,
 		return 0;
 	return call_int_hook(path_link, 0, old_dentry, new_dir, new_dentry);
 }
+EXPORT_SYMBOL_GPL(security_path_link);
 
 /**
  * security_path_rename() - Check if renaming a file is allowed
@@ -1849,13 +1852,15 @@ int security_path_chmod(const struct path *path, umode_t mode)
  * Check for permission to change owner/group of a file or directory.
  *
  * Return: Returns 0 if permission is granted.
- */
+ */EXPORT_SYMBOL_GPL(security_path_chmod);
+
 int security_path_chown(const struct path *path, kuid_t uid, kgid_t gid)
 {
 	if (unlikely(IS_PRIVATE(d_backing_inode(path->dentry))))
 		return 0;
 	return call_int_hook(path_chown, 0, path, uid, gid);
 }
+EXPORT_SYMBOL_GPL(security_path_chown);
 
 /**
  * security_path_chroot() - Check if changing the root directory is allowed
@@ -2098,7 +2103,8 @@ int security_inode_permission(struct inode *inode, int mask)
  * transferring disk quotas, etc).
  *
  * Return: Returns 0 if permission is granted.
- */
+ */EXPORT_SYMBOL_GPL(security_inode_permission);
+
 int security_inode_setattr(struct mnt_idmap *idmap,
 			   struct dentry *dentry, struct iattr *attr)
 {
@@ -2563,6 +2569,7 @@ int security_file_permission(struct file *file, int mask)
 
 	return fsnotify_perm(file, mask);
 }
+EXPORT_SYMBOL_GPL(security_file_permission);
 
 /**
  * security_file_alloc() - Allocate and init a file's LSM blob
@@ -2829,6 +2836,7 @@ int security_file_truncate(struct file *file)
 {
 	return call_int_hook(file_truncate, 0, file);
 }
+EXPORT_SYMBOL_GPL(security_file_truncate);
 
 /**
  * security_task_alloc() - Allocate a task's LSM blob
