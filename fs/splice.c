@@ -924,7 +924,6 @@ static int warn_unsupported(struct file *file, const char *op)
 		op, file, current->pid, current->comm);
 	return -EINVAL;
 }
-EXPORT_SYMBOL_GPL(do_splice_to);
 
 /*
  * Attempt to initiate a splice from pipe to file.
