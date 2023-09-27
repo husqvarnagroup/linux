@@ -2018,7 +2018,7 @@ out:
 static const struct file_operations yaffs_dir_operations = {
 	.read = generic_read_dir,
 #ifdef YAFFS_USE_DIR_ITERATE
-	.iterate = yaffs_iterate,
+	.iterate_shared = yaffs_iterate,
 #else
 	.readdir = yaffs_readdir,
 #endif
