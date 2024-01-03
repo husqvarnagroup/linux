@@ -7,6 +7,7 @@
  * Copyright (c) 2004 Freescale Semiconductor, Inc.
  */
 
+#include "linux/printk.h"
 #define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
 
 #include <linux/acpi.h>
@@ -756,11 +757,13 @@ static int get_phy_c45_devs_in_pkg(struct mii_bus *bus, int addr, int dev_addr,
 	int phy_reg;
 
 	phy_reg = mdiobus_c45_read(bus, addr, dev_addr, MDIO_DEVS2);
+	pr_info("phy_reg: %d\n", phy_reg);
 	if (phy_reg < 0)
 		return -EIO;
 	*devices_in_package = phy_reg << 16;
 
 	phy_reg = mdiobus_c45_read(bus, addr, dev_addr, MDIO_DEVS1);
+	pr_info("phy_reg: %d\n", phy_reg);
 	if (phy_reg < 0)
 		return -EIO;
 	*devices_in_package |= phy_reg;

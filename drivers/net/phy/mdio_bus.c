@@ -6,6 +6,7 @@
  * Copyright (c) 2004 Freescale Semiconductor, Inc.
  */
 
+#include "linux/printk.h"
 #define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
 
 #include <linux/delay.h>
@@ -596,19 +597,28 @@ static int mdiobus_scan_bus_c45(struct mii_bus *bus)
 {
 	int i;
 
+	pr_info("%s - %s:%d\n", __FUNCTION__, __FILE__, __LINE__);
+
 	for (i = 0; i < PHY_MAX_ADDR; i++) {
+		pr_info("%d\n", i);
 		if ((bus->phy_mask & BIT(i)) == 0) {
 			struct phy_device *phydev;
 
 			/* Don't scan C45 if we already have a C22 device */
-			if (bus->mdio_map[i])
+			if (bus->mdio_map[i]) {
+				pr_info("continue");
 				continue;
+			}
 
 			phydev = mdiobus_scan_c45(bus, i);
-			if (IS_ERR(phydev) && (PTR_ERR(phydev) != -ENODEV))
+			if (IS_ERR(phydev) && (PTR_ERR(phydev) != -ENODEV)) {
+				pr_debug("%s - %s:%d\n", __FUNCTION__, __FILE__, __LINE__);
+				pr_info("error");
 				return PTR_ERR(phydev);
+			}
 		}
 	}
+	pr_info("ok");
 	return 0;
 }
 

@@ -375,6 +375,8 @@ static int macb_mdio_read_c45(struct mii_bus *bus, int mii_id, int devad,
 	struct macb *bp = bus->priv;
 	int status;
 
+	pr_info("enter %s - %s:%d\n", __FUNCTION__, __FILE__, __LINE__);
+
 	status = pm_runtime_get_sync(&bp->pdev->dev);
 	if (status < 0) {
 		pm_runtime_put_noidle(&bp->pdev->dev);
@@ -382,8 +384,10 @@ static int macb_mdio_read_c45(struct mii_bus *bus, int mii_id, int devad,
 	}
 
 	status = macb_mdio_wait_for_idle(bp);
-	if (status < 0)
+	if (status < 0) {
+		pr_info("%s - %s:%d\n", __FUNCTION__, __FILE__, __LINE__);
 		goto mdio_read_exit;
+	}
 
 	macb_writel(bp, MAN, (MACB_BF(SOF, MACB_MAN_C45_SOF)
 			      | MACB_BF(RW, MACB_MAN_C45_ADDR)
@@ -393,8 +397,10 @@ static int macb_mdio_read_c45(struct mii_bus *bus, int mii_id, int devad,
 			      | MACB_BF(CODE, MACB_MAN_C45_CODE)));
 
 	status = macb_mdio_wait_for_idle(bp);
-	if (status < 0)
+	if (status < 0) {
+		pr_info("%s - %s:%d\n", __FUNCTION__, __FILE__, __LINE__);
 		goto mdio_read_exit;
+	}
 
 	macb_writel(bp, MAN, (MACB_BF(SOF, MACB_MAN_C45_SOF)
 			      | MACB_BF(RW, MACB_MAN_C45_READ)
@@ -403,8 +409,10 @@ static int macb_mdio_read_c45(struct mii_bus *bus, int mii_id, int devad,
 			      | MACB_BF(CODE, MACB_MAN_C45_CODE)));
 
 	status = macb_mdio_wait_for_idle(bp);
-	if (status < 0)
+	if (status < 0) {
+		pr_info("%s - %s:%d\n", __FUNCTION__, __FILE__, __LINE__);
 		goto mdio_read_exit;
+	}
 
 	status = MACB_BFEXT(DATA, macb_readl(bp, MAN));
 
@@ -412,6 +420,7 @@ mdio_read_exit:
 	pm_runtime_mark_last_busy(&bp->pdev->dev);
 	pm_runtime_put_autosuspend(&bp->pdev->dev);
 mdio_pm_exit:
+	pr_info("exit %s - %s:%d\n", __FUNCTION__, __FILE__, __LINE__);
 	return status;
 }
 
