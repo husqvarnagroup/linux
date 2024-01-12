@@ -61,8 +61,6 @@
 #define NEXT_TX_DESP_IDX(X)	(((X) + 1) & (ring->tx_ring_size - 1))
 #define NEXT_RX_DESP_IDX(X)	(((X) + 1) & (ring->rx_ring_size - 1))
 
-#define SYSC_REG_RSTCTRL	0x34
-
 static int fe_msg_level = -1;
 module_param_named(msg_level, fe_msg_level, int, 0);
 MODULE_PARM_DESC(msg_level, "Message level (-1=defaults,0=none,...,16=all)");
@@ -127,18 +125,15 @@ void fe_m32(struct fe_priv *eth, u32 clear, u32 set, unsigned reg)
 	spin_unlock(&eth->page_lock);
 }
 
-void fe_reset(u32 reset_bits)
+static void fe_reset_fe(struct fe_priv *priv)
 {
-	u32 t;
+	if (!priv->resets)
+		return;
 
-	t = rt_sysc_r32(SYSC_REG_RSTCTRL);
-	t |= reset_bits;
-	rt_sysc_w32(t, SYSC_REG_RSTCTRL);
-	usleep_range(10, 20);
-
-	t &= ~reset_bits;
-	rt_sysc_w32(t, SYSC_REG_RSTCTRL);
-	usleep_range(10, 20);
+	reset_control_assert(priv->resets);
+	usleep_range(60, 120);
+	reset_control_deassert(priv->resets);
+	usleep_range(1000, 1200);
 }
 
 static inline void fe_int_disable(u32 mask)
@@ -1085,11 +1080,7 @@ poll_again:
 	return rx_done;
 }
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 10, 0)
-static void fe_tx_timeout(struct net_device *dev)
-#else
 static void fe_tx_timeout(struct net_device *dev, unsigned int txqueue)
-#endif
 {
 	struct fe_priv *priv = netdev_priv(dev);
 	struct fe_tx_ring *ring = &priv->tx_ring;
@@ -1357,22 +1348,24 @@ static int __init fe_init(struct net_device *dev)
 {
 	struct fe_priv *priv = netdev_priv(dev);
 	struct device_node *port;
-	const char *mac_addr;
 	int err;
 
-	priv->soc->reset_fe();
+	fe_reset_fe(priv);
 
-	if (priv->soc->switch_init)
-		if (priv->soc->switch_init(priv)) {
+	if (priv->soc->switch_init) {
+		err = priv->soc->switch_init(priv);
+		if (err) {
+			if (err == -EPROBE_DEFER)
+				return err;
+
 			netdev_err(dev, "failed to initialize switch core\n");
 			return -ENODEV;
 		}
+	}
 
 	fe_reset_phy(priv);
 
-	mac_addr = of_get_mac_address(priv->dev->of_node);
-	if (!IS_ERR_OR_NULL(mac_addr))
-		ether_addr_copy(dev->dev_addr, mac_addr);
+	of_get_mac_address(priv->dev->of_node, dev->dev_addr);
 
 	/* If the mac address is invalid, use random mac address  */
 	if (!is_valid_ether_addr(dev->dev_addr)) {
@@ -1545,7 +1538,9 @@ static int fe_probe(struct platform_device *pdev)
 	struct clk *sysclk;
 	int err, napi_weight;
 
-	device_reset(&pdev->dev);
+	err = device_reset(&pdev->dev);
+	if (err)
+		dev_err(&pdev->dev, "failed to reset device\n");
 
 	match = of_match_device(of_fe_match, &pdev->dev);
 	soc = (struct fe_soc_data *)match->data;
@@ -1579,6 +1574,14 @@ static int fe_probe(struct platform_device *pdev)
 		goto err_free_dev;
 	}
 
+	priv = netdev_priv(netdev);
+	spin_lock_init(&priv->page_lock);
+	priv->resets = devm_reset_control_array_get_exclusive(&pdev->dev);
+	if (IS_ERR(priv->resets)) {
+		dev_err(&pdev->dev, "Failed to get resets for FE and ESW cores: %pe\n", priv->resets);
+		priv->resets = NULL;
+	}
+
 	if (soc->init_data)
 		soc->init_data(soc, netdev);
 	netdev->vlan_features = netdev->hw_features &
@@ -1593,8 +1596,6 @@ static int fe_probe(struct platform_device *pdev)
 	if (fe_reg_table[FE_REG_FE_DMA_VID_BASE])
 		netdev->features |= NETIF_F_HW_VLAN_CTAG_FILTER;
 
-	priv = netdev_priv(netdev);
-	spin_lock_init(&priv->page_lock);
 	if (fe_reg_table[FE_REG_FE_COUNTER_BASE]) {
 		priv->hw_stats = kzalloc(sizeof(*priv->hw_stats), GFP_KERNEL);
 		if (!priv->hw_stats) {
