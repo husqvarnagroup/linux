@@ -12,6 +12,7 @@
  *   Copyright (C) 2013-2015 Michael Lee <igvtee@gmail.com>
  */
 
+#include "ethtool.h"
 #include "mtk_eth_soc.h"
 #include "ethtool.h"
 
@@ -166,7 +167,7 @@ static void fe_get_strings(struct net_device *dev, u32 stringset, u8 *data)
 {
 	switch (stringset) {
 	case ETH_SS_STATS:
-		ethtool_puts(&data, *fe_gdma_str);
+		memcpy(data, *fe_gdma_str, sizeof(fe_gdma_str));
 		break;
 	}
 }
