@@ -244,10 +244,10 @@ static void fe_clean_rx(struct fe_priv *priv)
 		ring->rx_dma = NULL;
 	}
 
-	if (!ring->frag_cache.va)
+	if (!ring->frag_cache.encoded_page)
 	    return;
 
-	page = virt_to_page(ring->frag_cache.va);
+	page = virt_to_page(ring->frag_cache.encoded_page);
 	__page_frag_cache_drain(page, ring->frag_cache.pagecnt_bias);
 	memset(&ring->frag_cache, 0, sizeof(ring->frag_cache));
 }
@@ -487,7 +487,7 @@ static void fe_get_stats64(struct net_device *dev,
 	}
 
 	do {
-		start = u64_stats_fetch_begin_irq(&hwstats->syncp);
+		start = u64_stats_fetch_begin(&hwstats->syncp);
 		storage->rx_packets = hwstats->rx_packets;
 		storage->tx_packets = hwstats->tx_packets;
 		storage->rx_bytes = hwstats->rx_bytes;
@@ -499,7 +499,7 @@ static void fe_get_stats64(struct net_device *dev,
 		storage->rx_crc_errors = hwstats->rx_fcs_errors;
 		storage->rx_errors = hwstats->rx_checksum_errors;
 		storage->tx_aborted_errors = hwstats->tx_skip;
-	} while (u64_stats_fetch_retry_irq(&hwstats->syncp, start));
+	} while (u64_stats_fetch_retry(&hwstats->syncp, start));
 
 	storage->tx_errors = priv->netdev->stats.tx_errors;
 	storage->rx_dropped = priv->netdev->stats.rx_dropped;
@@ -1630,6 +1630,9 @@ static int fe_probe(struct platform_device *pdev)
 	priv->rx_ring.rx_ring_size = NUM_DMA_DESC;
 	INIT_WORK(&priv->pending_work, fe_pending_work);
 
+	if (priv->hw_stats)
+		u64_stats_init(&priv->hw_stats->syncp);
+
 	napi_weight = 16;
 	if (priv->flags & FE_FLAG_NAPI_WEIGHT) {
 		napi_weight *= 4;
@@ -1673,7 +1676,7 @@ err_out:
 	return err;
 }
 
-static int fe_remove(struct platform_device *pdev)
+static void fe_remove(struct platform_device *pdev)
 {
 	struct net_device *dev = platform_get_drvdata(pdev);
 	struct fe_priv *priv = netdev_priv(dev);
@@ -1686,8 +1689,6 @@ static int fe_remove(struct platform_device *pdev)
 	unregister_netdev(dev);
 	free_netdev(dev);
 	platform_set_drvdata(pdev, NULL);
-
-	return 0;
 }
 
 static struct platform_driver fe_driver = {
