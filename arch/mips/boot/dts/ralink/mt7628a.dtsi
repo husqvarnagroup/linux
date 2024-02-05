@@ -37,7 +37,7 @@
 		#size-cells = <1>;
 
 		sysc: system-controller@0 {
-			compatible = "ralink,mt7620a-sysc", "syscon";
+			compatible = "ralink,mt7628-sysc", "ralink,mt7688-sysc", "syscon";
 			reg = <0x0 0x60>;
 		};
 
