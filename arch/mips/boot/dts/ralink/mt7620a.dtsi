@@ -26,7 +26,7 @@
 		#size-cells = <1>;
 
 		sysc@0 {
-			compatible = "ralink,mt7620a-sysc";
+			compatible = "ralink,mt7620-sysc";
 			reg = <0x0 0x100>;
 		};
 
