@@ -655,9 +655,9 @@ static irqreturn_t mt7628_esw_interrupt(int irq, void *_priv)
 				 i, link);
 
 			if (link & BIT(i))
-				netif_carrier_on(dp->slave);
+				netif_carrier_on(dp->user);
 			else
-				netif_carrier_off(dp->slave);
+				netif_carrier_off(dp->user);
 		}
 	}
 
@@ -700,14 +700,16 @@ static void mt7628_esw_port_disable(struct dsa_switch *ds, int port)
 }
 
 static int mt7628_esw_port_bridge_join(struct dsa_switch *ds, int port,
-				       struct net_device *bridge)
+				       struct dsa_bridge bridge, bool *tx_fwd_offload,
+				       struct netlink_ext_ack *extack)
+
 {
 //	printk("%s (%d)\n", __func__, __LINE__); // test-only
 	return 0;
 }
 
 static void mt7628_esw_port_bridge_leave(struct dsa_switch *ds, int port,
-					 struct net_device *bridge)
+					 struct dsa_bridge bridge)
 {
 //	printk("%s (%d)\n", __func__, __LINE__); // test-only
 }
