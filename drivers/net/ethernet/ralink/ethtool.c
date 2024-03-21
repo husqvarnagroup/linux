@@ -126,7 +126,9 @@ out_get_link:
 }
 
 static int fe_set_ringparam(struct net_device *dev,
-			    struct ethtool_ringparam *ring)
+			    struct ethtool_ringparam *ring,
+			    struct kernel_ethtool_ringparam *kernel_rp,
+			    struct netlink_ext_ack *extack)
 {
 	struct fe_priv *priv = netdev_priv(dev);
 
@@ -147,7 +149,9 @@ static int fe_set_ringparam(struct net_device *dev,
 }
 
 static void fe_get_ringparam(struct net_device *dev,
-			     struct ethtool_ringparam *ring)
+			     struct ethtool_ringparam *ring,
+			     struct kernel_ethtool_ringparam *kernel_rp,
+			     struct netlink_ext_ack *extack)
 {
 	struct fe_priv *priv = netdev_priv(dev);
 
@@ -161,7 +165,7 @@ static void fe_get_strings(struct net_device *dev, u32 stringset, u8 *data)
 {
 	switch (stringset) {
 	case ETH_SS_STATS:
-		memcpy(data, *fe_gdma_str, sizeof(fe_gdma_str));
+		ethtool_puts(&data, *fe_gdma_str);
 		break;
 	}
 }

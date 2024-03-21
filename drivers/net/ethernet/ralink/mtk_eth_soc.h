@@ -49,7 +49,7 @@ enum fe_work_flag {
 	FE_FLAG_MAX
 };
 
-#define MTK_FE_DRV_VERSION		"0.1.2"
+#define MTK_FE_DRV_VERSION		"0.2"
 
 /* power of 2 to let NEXT_TX_DESP_IDX work */
 #define NUM_DMA_DESC		BIT(10)
@@ -378,8 +378,7 @@ struct fe_soc_data {
 	const u16 *reg_table;
 
 	void (*init_data)(struct fe_soc_data *data, struct net_device *netdev);
-	void (*reset_fe)(void);
-	void (*set_mac)(struct fe_priv *priv, unsigned char *mac);
+	void (*set_mac)(struct fe_priv *priv, const unsigned char *mac);
 	int (*fwd_config)(struct fe_priv *priv);
 	void (*tx_dma)(struct fe_tx_dma *txd);
 	int (*switch_init)(struct fe_priv *priv);
@@ -493,7 +492,7 @@ struct fe_priv {
 	struct work_struct		pending_work;
 	DECLARE_BITMAP(pending_flags, FE_FLAG_MAX);
 
-	struct reset_control		*rst_ppe;
+	struct reset_control		*resets;
 	struct mtk_foe_entry		*foe_table;
 	dma_addr_t			foe_table_phys;
 	struct flow_offload __rcu	**foe_flow_table;
@@ -511,8 +510,6 @@ void fe_stats_update(struct fe_priv *priv);
 void fe_fwd_config(struct fe_priv *priv);
 void fe_reg_w32(u32 val, enum fe_reg reg);
 u32 fe_reg_r32(enum fe_reg reg);
-
-void fe_reset(u32 reset_bits);
 
 static inline void *priv_netdev(struct fe_priv *priv)
 {
