@@ -105,6 +105,11 @@
 			status = "disabled";
 		};
 	};
+
+	bootcount@fffffe6c {
+		compatible = "uboot,bootcount";
+		reg = <0xfffffe6c 0x4>;
+	};
 };
 
 &macb0 {
