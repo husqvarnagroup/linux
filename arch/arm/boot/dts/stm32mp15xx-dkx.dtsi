@@ -29,25 +29,7 @@
 
 		mcuram2: mcuram2@10000000 {
 			compatible = "shared-dma-pool";
-			reg = <0x10000000 0x40000>;
-			no-map;
-		};
-
-		vdev0vring0: vdev0vring0@10040000 {
-			compatible = "shared-dma-pool";
-			reg = <0x10040000 0x1000>;
-			no-map;
-		};
-
-		vdev0vring1: vdev0vring1@10041000 {
-			compatible = "shared-dma-pool";
-			reg = <0x10041000 0x1000>;
-			no-map;
-		};
-
-		vdev0buffer: vdev0buffer@10042000 {
-			compatible = "shared-dma-pool";
-			reg = <0x10042000 0x4000>;
+			reg = <0x10000000 0x60000>;
 			no-map;
 		};
 
@@ -485,9 +467,11 @@
 	};
 };
 
-&ipcc {
-	status = "okay";
-};
+/*
+ * &ipcc {
+ * 	status = "okay";
+ * };
+ */
 
 &ltdc {
 	pinctrl-names = "default", "sleep";
@@ -503,10 +487,11 @@
 };
 
 &m4_rproc {
-	memory-region = <&retram>, <&mcuram>, <&mcuram2>, <&vdev0vring0>,
-			<&vdev0vring1>, <&vdev0buffer>, <&mcu_rsc_table>;
-	mboxes = <&ipcc 0>, <&ipcc 1>, <&ipcc 2>, <&ipcc 3>;
-	mbox-names = "vq0", "vq1", "shutdown", "detach";
+	memory-region = <&retram>, <&mcuram>, <&mcuram2>, <&mcu_rsc_table>;
+	/*
+         * mboxes = <&ipcc 0>, <&ipcc 1>, <&ipcc 2>, <&ipcc 3>;
+	 * mbox-names = "vq0", "vq1", "shutdown", "detach";
+         */
 	interrupt-parent = <&exti>;
 	interrupts = <68 1>;
 	wakeup-source;
