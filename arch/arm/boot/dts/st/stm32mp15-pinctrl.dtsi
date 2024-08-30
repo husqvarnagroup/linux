@@ -2063,15 +2063,15 @@
 				 <STM32_PINMUX('F', 5, AF9)>, /* SDMMC3_D2 */
 				 <STM32_PINMUX('D', 7, AF10)>, /* SDMMC3_D3 */
 				 <STM32_PINMUX('F', 1, AF9)>; /* SDMMC3_CMD */
-			slew-rate = <1>;
+			slew-rate = <2>;
 			drive-push-pull;
 			bias-pull-up;
 		};
 		pins2 {
 			pinmux = <STM32_PINMUX('G', 15, AF10)>; /* SDMMC3_CK */
-			slew-rate = <2>;
+			slew-rate = <3>;
 			drive-push-pull;
-			bias-pull-up;
+			bias-disable;
 		};
 	};
 
