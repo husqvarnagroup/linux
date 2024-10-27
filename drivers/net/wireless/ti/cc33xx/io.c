@@ -26,14 +26,9 @@ void cc33xx_disable_interrupts_nosync(struct cc33xx *cc)
 	cc->if_ops->disable_irq(cc->dev);
 }
 
-void cc33xx_irq(void *cookie);
 void cc33xx_enable_interrupts(struct cc33xx *cc)
 {
 	cc->if_ops->enable_irq(cc->dev);
-
-	cc33xx_debug(DEBUG_CC33xx, "IBI_WA: Read core status");
-	cc33xx_irq(cc);
-	cc33xx_debug(DEBUG_CC33xx, "IBI_WA: Core status processed");
 }
 
 void cc33xx_io_reset(struct cc33xx *cc)
