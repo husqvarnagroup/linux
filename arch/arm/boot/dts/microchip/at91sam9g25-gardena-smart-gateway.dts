@@ -46,7 +46,7 @@
 		power_green {
 			label = "smartgw:power:green";
 			gpios = <&pioC 20 GPIO_ACTIVE_HIGH>;
-			default-state = "on";
+			linux,default-trigger = "timer";
 		};
 
 		power_red {
