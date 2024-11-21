@@ -56,7 +56,7 @@
 		led-power-green {
 			label = "smartgw:power:green";
 			gpios = <&gpio 19 GPIO_ACTIVE_HIGH>;
-			default-state = "off";
+			linux,default-trigger = "timer";
 		};
 
 		led-power-red {
@@ -116,6 +116,7 @@
 
 	aliases {
 		serial0 = &uart0;
+		ethernet0 = &ethernet;
 	};
 };
 
@@ -171,6 +172,14 @@
 	};
 };
 
+&ethernet {
+	status = "okay";
+};
+
+&esw {
+	status = "okay";
+};
+
 &uart1 {
 	status = "okay";
 
@@ -202,4 +211,11 @@
 &wmac {
 	status = "okay";
 	mediatek,mtd-eeprom = <&factory 0x0000>;
+};
+
+&palmbus {
+	bootcount@0x6c {
+		compatible = "uboot,bootcount";
+		reg = <0x0000006c 0x4>;
+	};
 };

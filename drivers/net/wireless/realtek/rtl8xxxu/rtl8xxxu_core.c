@@ -28,6 +28,8 @@
 #include <linux/wireless.h>
 #include <linux/firmware.h>
 #include <linux/moduleparam.h>
+#include <linux/debugfs.h>
+#include <linux/seq_file.h>
 #include <net/mac80211.h>
 #include "rtl8xxxu.h"
 #include "rtl8xxxu_regs.h"
@@ -1496,6 +1498,87 @@ void rtl8xxxu_gen2_config_channel(struct ieee80211_hw *hw)
 		}
 		rtl8xxxu_write_rfreg(priv, i, RF6052_REG_MODE_AG, val32);
 	}
+}
+
+#define MAX_TXPWR_IDX_NMODE_92S		63
+
+u8
+rtl8xxxu_gen1_dbm_to_txpwridx(struct rtl8xxxu_priv *priv, u16 mode, int dbm)
+{
+	u8 txpwridx;
+	long offset;
+
+	switch (mode) {
+	case WIRELESS_MODE_B:
+		offset = -7;
+		break;
+	case WIRELESS_MODE_G:
+	case WIRELESS_MODE_N_24G:
+		offset = -8;
+		break;
+	default:
+		offset = -8;
+		break;
+	}
+
+	if ((dbm - offset) > 0)
+		txpwridx = (u8)((dbm - offset) * 2);
+	else
+		txpwridx = 0;
+
+	if (txpwridx > MAX_TXPWR_IDX_NMODE_92S)
+		txpwridx = MAX_TXPWR_IDX_NMODE_92S;
+
+	return txpwridx;
+}
+
+static int
+rtl8xxxu_gen1_txpwridx_to_dbm(struct rtl8xxxu_priv *priv, u16 mode, u8 idx)
+{
+	int offset;
+	int pwrout_dbm;
+
+	switch (mode) {
+	case WIRELESS_MODE_B:
+		offset = -7;
+		break;
+	case WIRELESS_MODE_G:
+	case WIRELESS_MODE_N_24G:
+		offset = -8;
+		break;
+	default:
+		offset = -8;
+		break;
+	}
+	pwrout_dbm = idx / 2 + offset;
+
+	return pwrout_dbm;
+}
+
+int
+rtl8xxxu_gen1_get_tx_power(struct rtl8xxxu_priv *priv)
+{
+	u8 txpwr_level;
+	int txpwr_dbm;
+
+	txpwr_level = priv->cur_cck_txpwridx;
+	txpwr_dbm = rtl8xxxu_gen1_txpwridx_to_dbm(priv, WIRELESS_MODE_B,
+						  txpwr_level);
+	txpwr_level = priv->cur_ofdm24g_txpwridx +
+		      priv->ofdm_tx_power_index_diff[1].a;
+
+	if (rtl8xxxu_gen1_txpwridx_to_dbm(priv, WIRELESS_MODE_G, txpwr_level)
+	    > txpwr_dbm)
+		txpwr_dbm = rtl8xxxu_gen1_txpwridx_to_dbm(priv, WIRELESS_MODE_G,
+							  txpwr_level);
+	txpwr_level = priv->cur_ofdm24g_txpwridx;
+	if (rtl8xxxu_gen1_txpwridx_to_dbm(priv, WIRELESS_MODE_N_24G,
+					  txpwr_level) > txpwr_dbm)
+		txpwr_dbm = rtl8xxxu_gen1_txpwridx_to_dbm(priv,
+							  WIRELESS_MODE_N_24G,
+							  txpwr_level);
+
+	return txpwr_dbm;
 }
 
 void
@@ -3306,7 +3389,7 @@ static void rtl8xxxu_phy_iqcalibrate(struct rtl8xxxu_priv *priv,
 			break;
 		} else if (i == (retry - 1) && path_a_ok == 0x01) {
 			/* TX IQK OK */
-			dev_dbg(dev, "%s: Path A IQK Only Tx Success!!\n",
+			dev_err(dev, "%s: Path A IQK only TX success!\n",
 				__func__);
 
 			val32 = rtl8xxxu_read32(priv,
@@ -3319,7 +3402,7 @@ static void rtl8xxxu_phy_iqcalibrate(struct rtl8xxxu_priv *priv,
 	}
 
 	if (!path_a_ok)
-		dev_dbg(dev, "%s: Path A IQK failed!\n", __func__);
+		dev_err(dev, "%s: Path A IQK failed!\n", __func__);
 
 	if (priv->tx_paths > 1) {
 		/*
@@ -3346,6 +3429,9 @@ static void rtl8xxxu_phy_iqcalibrate(struct rtl8xxxu_priv *priv,
 				break;
 			} else if (i == (retry - 1) && path_b_ok == 0x01) {
 				/* TX IQK OK */
+				dev_err(dev,
+					"%s: Path B IQK only TX success!\n",
+					__func__);
 				val32 = rtl8xxxu_read32(priv, REG_TX_POWER_BEFORE_IQK_B);
 				result[t][4] = (val32 >> 16) & 0x3ff;
 				val32 = rtl8xxxu_read32(priv, REG_TX_POWER_AFTER_IQK_B);
@@ -3354,7 +3440,7 @@ static void rtl8xxxu_phy_iqcalibrate(struct rtl8xxxu_priv *priv,
 		}
 
 		if (!path_b_ok)
-			dev_dbg(dev, "%s: Path B IQK failed!\n", __func__);
+			dev_err(dev, "%s: Path B IQK failed!\n", __func__);
 	}
 
 	/* Back to BB mode, load original value */
@@ -4943,6 +5029,73 @@ void rtl8xxxu_update_ra_report(struct rtl8xxxu_ra_report *rarpt,
 	rarpt->desc_rate = rate;
 }
 
+static int rtl8xxxu_get_txpower(struct ieee80211_hw *hw,
+				struct ieee80211_vif *vif, int *dbm)
+{
+	struct rtl8xxxu_priv *priv = hw->priv;
+
+	if (!priv->fops->get_tx_power)
+		return -EOPNOTSUPP;
+
+	*dbm = priv->fops->get_tx_power(priv);
+
+	return 0;
+}
+
+static void rtl8xxxu_update_tx_power(struct rtl8xxxu_priv *priv, int dbm)
+{
+	bool ht40 = false;
+	struct ieee80211_hw *hw = priv->hw;
+	int channel = hw->conf.chandef.chan->hw_value;
+	u8 cck_txpwridx, ofdm_txpwridx;
+	int group;
+
+	if (!priv->fops->dbm_to_txpwridx)
+		return;
+
+	switch (hw->conf.chandef.width) {
+	case NL80211_CHAN_WIDTH_20_NOHT:
+	case NL80211_CHAN_WIDTH_20:
+		ht40 = false;
+		break;
+	case NL80211_CHAN_WIDTH_40:
+		ht40 = true;
+		break;
+	default:
+		return;
+	}
+
+	/* change the power level to power index */
+	cck_txpwridx = priv->fops->dbm_to_txpwridx(priv, WIRELESS_MODE_B,
+						   dbm);
+	ofdm_txpwridx = priv->fops->dbm_to_txpwridx(priv, WIRELESS_MODE_N_24G,
+						    dbm);
+
+	if (ofdm_txpwridx - priv->ofdm_tx_power_index_diff[1].a > 0) {
+		/* refer to rtlefuse->legacy_ht_txpowerdiff in vendor driver */
+		ofdm_txpwridx -= priv->ofdm_tx_power_index_diff[1].a;
+	} else {
+		ofdm_txpwridx = 0;
+	}
+
+	group = rtl8xxxu_gen1_channel_to_group(channel);
+
+	if (cck_txpwridx <= priv->cck_tx_power_index_A_backup[group]) {
+		priv->cck_tx_power_index_A[group] = cck_txpwridx;
+		priv->cck_tx_power_index_B[group] = cck_txpwridx;
+	}
+
+	if (ofdm_txpwridx <= priv->ht40_1s_tx_power_index_A_backup[group]) {
+		priv->ht40_1s_tx_power_index_A[group] = ofdm_txpwridx;
+		priv->ht40_1s_tx_power_index_B[group] = ofdm_txpwridx;
+	}
+
+	priv->cur_cck_txpwridx = priv->cck_tx_power_index_A[group];
+	priv->cur_ofdm24g_txpwridx = priv->ht40_1s_tx_power_index_A[group];
+
+	priv->fops->set_tx_power(priv, channel, ht40);
+}
+
 static void
 rtl8xxxu_bss_info_changed(struct ieee80211_hw *hw, struct ieee80211_vif *vif,
 			  struct ieee80211_bss_conf *bss_conf, u64 changed)
@@ -5067,6 +5220,10 @@ rtl8xxxu_bss_info_changed(struct ieee80211_hw *hw, struct ieee80211_vif *vif,
 	if (changed & BSS_CHANGED_BEACON)
 		schedule_work(&priv->update_beacon_work);
 
+	if (changed & BSS_CHANGED_TXPOWER) {
+		dev_dbg(dev, "Changed BSS TX power to %u dBm\n", bss_conf->txpower);
+		rtl8xxxu_update_tx_power(priv, bss_conf->txpower);
+	}
 error:
 	return;
 }
@@ -5720,6 +5877,11 @@ void rtl8723au_rx_parse_phystats(struct rtl8xxxu_priv *priv,
 		rx_status->signal =
 			(phy_stats->cck_sig_qual_ofdm_pwdb_all >> 1) - 110;
 	}
+
+	// refers to rtlxxxx_rx_query_desc of rtlwifi/rtlxxxx/trx.c
+	// needs to verify on RTL8723BU
+	if (priv->rtl_chip != RTL8723B && priv->rtl_chip != RTL8192E)
+		rx_status->signal += 10;
 }
 
 static void jaguar2_rx_parse_phystats_type0(struct rtl8xxxu_priv *priv,
@@ -6658,6 +6820,9 @@ static int rtl8xxxu_config(struct ieee80211_hw *hw, u32 changed)
 		priv->fops->config_channel(hw);
 	}
 
+	if (changed & IEEE80211_CONF_CHANGE_POWER)
+		rtl8xxxu_update_tx_power(priv, hw->conf.power_level);
+
 exit:
 	return ret;
 }
@@ -7340,6 +7505,130 @@ static int rtl8xxxu_sta_remove(struct ieee80211_hw *hw,
 	return 0;
 }
 
+struct rtl8xxxu_debugfs_priv {
+	struct rtl8xxxu_priv *priv;
+	int (*cb_read)(struct seq_file *m, void *v);
+	ssize_t (*cb_write)(struct file *filp, const char __user *buffer,
+			    size_t count, loff_t *loff);
+	u32 cb_data;
+};
+
+static int rtl8xxxu_debug_get_common(struct seq_file *m, void *v)
+{
+	struct rtl8xxxu_debugfs_priv *debugfs_priv = m->private;
+
+	return debugfs_priv->cb_read(m, v);
+}
+
+static int dl_debug_open_common(struct inode *inode, struct file *file)
+{
+	return single_open(file, rtl8xxxu_debug_get_common, inode->i_private);
+}
+
+static const struct file_operations file_ops_common = {
+	.open = dl_debug_open_common,
+	.read = seq_read,
+	.llseek = seq_lseek,
+	.release = single_release,
+};
+
+static int rtl8xxxu_debug_get_macregs(struct seq_file *m, void *v)
+{
+	struct rtl8xxxu_debugfs_priv *debugfs_priv = m->private;
+	struct rtl8xxxu_priv *priv = debugfs_priv->priv;
+	int i, j = 1;
+
+	seq_printf(m, "======= MAC REG (rtl8xxxu) =======\n");
+	for (i = 0; i < 0x800; i += 4) {
+		if (j % 4 == 1)
+			seq_printf(m, "0x%03x", i);
+		seq_printf(m, " 0x%08x ", rtl8xxxu_read32(priv, i));
+		if ((j++) % 4 == 0)
+			seq_puts(m, "\n");
+	}
+	return 0;
+}
+
+static struct rtl8xxxu_debugfs_priv rtl8xxxu_debug_priv_macregs = {
+	.cb_read = rtl8xxxu_debug_get_macregs,
+	.cb_data = 0,
+};
+
+static int rtl8xxxu_debug_get_bbregs(struct seq_file *m, void *v)
+{
+	struct rtl8xxxu_debugfs_priv *debugfs_priv = m->private;
+	struct rtl8xxxu_priv *priv = debugfs_priv->priv;
+	int i, j = 1;
+
+	seq_printf(m, "======= BB REG (rtl8xxxu) =======\n");
+	for (i = 0x800; i < 0x1000; i += 4) {
+		if (j % 4 == 1)
+			seq_printf(m, "0x%03x", i);
+		seq_printf(m, " 0x%08x ", rtl8xxxu_read32(priv, i));
+		if ((j++) % 4 == 0)
+			seq_puts(m, "\n");
+	}
+	return 0;
+}
+
+static struct rtl8xxxu_debugfs_priv rtl8xxxu_debug_priv_bbregs = {
+	.cb_read = rtl8xxxu_debug_get_bbregs,
+	.cb_data = 0,
+};
+
+static int rtl8xxxu_debug_get_rfregs(struct seq_file *m, void *v)
+{
+	struct rtl8xxxu_debugfs_priv *debugfs_priv = m->private;
+	struct rtl8xxxu_priv *priv = debugfs_priv->priv;
+	int i, j = 1, path, path_nums;
+
+	if (priv->tx_paths == 1)
+		path_nums = 1;
+	else
+		path_nums = 2;
+
+	for (path = 0; path < path_nums; path++) {
+		seq_printf(m, "======= RF REG (rtl8xxxu) =======\n");
+		seq_printf(m, "RF_Path(%x)\n", path);
+		for (i = 0; i < 0x100; i++) {
+			if (j % 4 == 1)
+				seq_printf(m, "0x%02x ", i);
+			seq_printf(m, " 0x%08x ",
+				   rtl8xxxu_read_rfreg(priv, path, i));
+			if ((j++) % 4 == 0)
+				seq_puts(m, "\n");
+		}
+	}
+	return 0;
+}
+
+static struct rtl8xxxu_debugfs_priv rtl8xxxu_debug_priv_rfregs = {
+	.cb_read = rtl8xxxu_debug_get_rfregs,
+	.cb_data = 0,
+};
+
+void rtl8xxxu_debugfs_init(struct rtl8xxxu_priv *priv)
+{
+	priv->debugfs_dir =
+		debugfs_create_dir("rtl8xxxu", priv->hw->wiphy->debugfsdir);
+
+	rtl8xxxu_debug_priv_macregs.priv = priv;
+	debugfs_create_file("mac_reg_dump", S_IFREG | 0400, priv->debugfs_dir,
+			    &rtl8xxxu_debug_priv_macregs, &file_ops_common);
+	rtl8xxxu_debug_priv_bbregs.priv = priv;
+	debugfs_create_file("bb_reg_dump", S_IFREG | 0400, priv->debugfs_dir,
+			    &rtl8xxxu_debug_priv_bbregs, &file_ops_common);
+	rtl8xxxu_debug_priv_rfregs.priv = priv;
+	debugfs_create_file("rf_reg_dump", S_IFREG | 0400, priv->debugfs_dir,
+			    &rtl8xxxu_debug_priv_rfregs, &file_ops_common);
+}
+
+void rtl8xxxu_debugfs_remove(struct rtl8xxxu_priv *priv)
+{
+	debugfs_remove_recursive(priv->debugfs_dir);
+	priv->debugfs_dir = NULL;
+}
+
 static const struct ieee80211_ops rtl8xxxu_ops = {
 	.tx = rtl8xxxu_tx,
 	.wake_tx_queue = ieee80211_handle_wake_tx_queue,
@@ -7362,6 +7651,7 @@ static const struct ieee80211_ops rtl8xxxu_ops = {
 	.set_tim = rtl8xxxu_set_tim,
 	.sta_add = rtl8xxxu_sta_add,
 	.sta_remove = rtl8xxxu_sta_remove,
+	.get_txpower = rtl8xxxu_get_txpower,
 };
 
 static int rtl8xxxu_parse_usb(struct rtl8xxxu_priv *priv,
@@ -7472,6 +7762,20 @@ static void rtl8xxxu_deinit_led(struct rtl8xxxu_priv *priv)
 
 	priv->fops->led_classdev_brightness_set(led, LED_OFF);
 	led_classdev_unregister(led);
+}
+
+static void rtl8xxxu_backup_efuse(struct rtl8xxxu_priv *priv)
+{
+	memcpy(priv->cck_tx_power_index_A_backup, priv->cck_tx_power_index_A,
+	       sizeof(priv->cck_tx_power_index_A_backup));
+	memcpy(priv->cck_tx_power_index_B_backup, priv->cck_tx_power_index_B,
+	       sizeof(priv->cck_tx_power_index_B_backup));
+	memcpy(priv->ht40_1s_tx_power_index_A_backup,
+	       priv->ht40_1s_tx_power_index_A,
+	       sizeof(priv->ht40_1s_tx_power_index_A_backup));
+	memcpy(priv->ht40_1s_tx_power_index_B_backup,
+	       priv->ht40_1s_tx_power_index_B,
+	       sizeof(priv->ht40_1s_tx_power_index_B_backup));
 }
 
 static int rtl8xxxu_probe(struct usb_interface *interface,
@@ -7592,6 +7896,7 @@ static int rtl8xxxu_probe(struct usb_interface *interface,
 		dev_err(&udev->dev, "Fatal - failed to parse EFuse\n");
 		goto err_set_intfdata;
 	}
+	rtl8xxxu_backup_efuse(priv);
 
 	if (rtl8xxxu_debug & RTL8XXXU_DEBUG_EFUSE)
 		rtl8xxxu_dump_efuse(priv);
@@ -7629,6 +7934,8 @@ static int rtl8xxxu_probe(struct usb_interface *interface,
 		sband->ht_cap.mcs.rx_mask[1] = 0xff;
 		sband->ht_cap.cap |= IEEE80211_HT_CAP_SGI_40;
 	}
+	/* only one spatial-stream STBC RX supported */
+	sband->ht_cap.cap |= (1 << IEEE80211_HT_CAP_RX_STBC_SHIFT);
 	sband->ht_cap.mcs.tx_params = IEEE80211_HT_MCS_TX_DEFINED;
 	/*
 	 * Some APs will negotiate HT20_40 in a noisy environment leading
@@ -7669,6 +7976,8 @@ static int rtl8xxxu_probe(struct usb_interface *interface,
 
 	rtl8xxxu_init_led(priv);
 
+	rtl8xxxu_debugfs_init(priv);
+
 	return 0;
 
 err_set_intfdata:
@@ -7695,6 +8004,8 @@ static void rtl8xxxu_disconnect(struct usb_interface *interface)
 	priv = hw->priv;
 
 	rtl8xxxu_deinit_led(priv);
+
+	rtl8xxxu_debugfs_remove(priv);
 
 	ieee80211_unregister_hw(hw);
 

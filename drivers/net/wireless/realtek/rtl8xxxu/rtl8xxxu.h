@@ -1807,6 +1807,12 @@ struct rtl8xxxu_priv {
 	u8 cck_tx_power_index_B[RTL8XXXU_MAX_CHANNEL_GROUPS];
 	u8 ht40_1s_tx_power_index_A[RTL8XXXU_MAX_CHANNEL_GROUPS];
 	u8 ht40_1s_tx_power_index_B[RTL8XXXU_MAX_CHANNEL_GROUPS];
+
+	u8 cck_tx_power_index_A_backup[RTL8XXXU_MAX_CHANNEL_GROUPS];
+	u8 cck_tx_power_index_B_backup[RTL8XXXU_MAX_CHANNEL_GROUPS];
+	u8 ht40_1s_tx_power_index_A_backup[RTL8XXXU_MAX_CHANNEL_GROUPS];
+	u8 ht40_1s_tx_power_index_B_backup[RTL8XXXU_MAX_CHANNEL_GROUPS];
+
 	/*
 	 * The following entries are half-bytes split as:
 	 * bits 0-3: path A, bits 4-7: path B, all values 4 bits signed
@@ -1825,6 +1831,7 @@ struct rtl8xxxu_priv {
 	struct rtl8723au_idx ht20_tx_power_diff[RTL8723B_TX_COUNT];
 	struct rtl8723au_idx ht40_tx_power_diff[RTL8723B_TX_COUNT];
 	struct rtl8xxxu_power_base *power_base;
+	u8 cur_cck_txpwridx, cur_ofdm24g_txpwridx;
 	u8 package_type;
 	u32 chip_cut:4;
 	u32 rom_rev:4;
@@ -1914,6 +1921,7 @@ struct rtl8xxxu_priv {
 	struct rtl8xxxu_ra_report ra_report;
 	struct rtl8xxxu_cfo_tracking cfo_tracking;
 	struct rtl8xxxu_ra_info ra_info;
+	struct dentry *debugfs_dir;
 
 	bool led_registered;
 	char led_name[32];
@@ -1967,6 +1975,8 @@ struct rtl8xxxu_fileops {
 	void (*enable_rf) (struct rtl8xxxu_priv *priv);
 	void (*disable_rf) (struct rtl8xxxu_priv *priv);
 	void (*usb_quirks) (struct rtl8xxxu_priv *priv);
+	u8 (*dbm_to_txpwridx)(struct rtl8xxxu_priv *priv, u16 mode, int dbm);
+	int (*get_tx_power)(struct rtl8xxxu_priv *priv);
 	void (*set_tx_power) (struct rtl8xxxu_priv *priv, int channel,
 			      bool ht40);
 	void (*update_rate_mask) (struct rtl8xxxu_priv *priv,
@@ -2084,11 +2094,14 @@ void rtl8xxxu_disabled_to_emu(struct rtl8xxxu_priv *priv);
 int rtl8xxxu_init_llt_table(struct rtl8xxxu_priv *priv);
 void rtl8xxxu_gen1_phy_iq_calibrate(struct rtl8xxxu_priv *priv);
 void rtl8xxxu_gen1_init_phy_bb(struct rtl8xxxu_priv *priv);
+u8 rtl8xxxu_gen1_dbm_to_txpwridx(struct rtl8xxxu_priv *priv,
+				 u16 mode, int dbm);
 void rtl8xxxu_gen1_set_tx_power(struct rtl8xxxu_priv *priv,
 				int channel, bool ht40);
 void rtl8188f_channel_to_group(int channel, int *group, int *cck_group);
 void rtl8188f_set_tx_power(struct rtl8xxxu_priv *priv,
 			   int channel, bool ht40);
+int rtl8xxxu_gen1_get_tx_power(struct rtl8xxxu_priv *priv);
 void rtl8xxxu_gen1_config_channel(struct ieee80211_hw *hw);
 void rtl8xxxu_gen2_config_channel(struct ieee80211_hw *hw);
 void rtl8xxxu_gen1_usb_quirks(struct rtl8xxxu_priv *priv);

@@ -16,11 +16,6 @@
 		};
 	};
 
-	resetc: reset-controller {
-		compatible = "ralink,rt2880-reset";
-		#reset-cells = <1>;
-	};
-
 	cpuintc: interrupt-controller {
 		#address-cells = <0>;
 		#interrupt-cells = <1>;
@@ -28,7 +23,7 @@
 		compatible = "mti,cpu-interrupt-controller";
 	};
 
-	palmbus@10000000 {
+	palmbus: palmbus@10000000 {
 		compatible = "palmbus";
 		reg = <0x10000000 0x200000>;
 		ranges = <0x0 0x10000000 0x1FFFFF>;
@@ -37,8 +32,10 @@
 		#size-cells = <1>;
 
 		sysc: system-controller@0 {
-			compatible = "ralink,mt7620a-sysc", "syscon";
+			compatible = "ralink,mt7628-sysc", "ralink,mt7688-sysc", "syscon";
 			reg = <0x0 0x60>;
+			#clock-cells = <1>;
+			#reset-cells = <1>;
 		};
 
 		pinmux: pinmux@60 {
@@ -137,12 +134,7 @@
 		watchdog: watchdog@100 {
 			compatible = "mediatek,mt7621-wdt";
 			reg = <0x100 0x30>;
-
-			resets = <&resetc 8>;
-			reset-names = "wdt";
-
-			interrupt-parent = <&intc>;
-			interrupts = <24>;
+			mediatek,sysctl = <&sysc>;
 
 			status = "disabled";
 		};
@@ -154,7 +146,7 @@
 			interrupt-controller;
 			#interrupt-cells = <1>;
 
-			resets = <&resetc 9>;
+			resets = <&sysc 9>;
 			reset-names = "intc";
 
 			interrupt-parent = <&cpuintc>;
@@ -187,10 +179,13 @@
 			compatible = "ralink,mt7621-spi";
 			reg = <0xb00 0x100>;
 
+			clocks = <&sysc 9>;
+			clock-names = "spi";
+
 			pinctrl-names = "default";
 			pinctrl-0 = <&pinmux_spi_spi>;
 
-			resets = <&resetc 18>;
+			resets = <&sysc 18>;
 			reset-names = "spi";
 
 			#address-cells = <1>;
@@ -203,10 +198,13 @@
 			compatible = "mediatek,mt7621-i2c";
 			reg = <0x900 0x100>;
 
+			clocks = <&sysc 7>;
+			clock-names = "i2c";
+
 			pinctrl-names = "default";
 			pinctrl-0 = <&pinmux_i2c_i2c>;
 
-			resets = <&resetc 16>;
+			resets = <&sysc 16>;
 			reset-names = "i2c";
 
 			#address-cells = <1>;
@@ -219,10 +217,13 @@
 			compatible = "ns16550a";
 			reg = <0xc00 0x100>;
 
+			clocks = <&sysc 11>;
+			clock-names = "uart0";
+
 			pinctrl-names = "default";
 			pinctrl-0 = <&pinmux_uart0_uart>;
 
-			resets = <&resetc 12>;
+			resets = <&sysc 12>;
 			reset-names = "uart0";
 
 			interrupt-parent = <&intc>;
@@ -235,10 +236,13 @@
 			compatible = "ns16550a";
 			reg = <0xd00 0x100>;
 
+			clocks = <&sysc 12>;
+			clock-names = "uart1";
+
 			pinctrl-names = "default";
 			pinctrl-0 = <&pinmux_uart1_uart>;
 
-			resets = <&resetc 19>;
+			resets = <&sysc 19>;
 			reset-names = "uart1";
 
 			interrupt-parent = <&intc>;
@@ -251,10 +255,13 @@
 			compatible = "ns16550a";
 			reg = <0xe00 0x100>;
 
+			clocks = <&sysc 13>;
+			clock-names = "uart2";
+
 			pinctrl-names = "default";
 			pinctrl-0 = <&pinmux_uart2_uart>;
 
-			resets = <&resetc 20>;
+			resets = <&sysc 20>;
 			reset-names = "uart2";
 
 			interrupt-parent = <&intc>;
@@ -271,7 +278,7 @@
 		#phy-cells = <0>;
 
 		ralink,sysctl = <&sysc>;
-		resets = <&resetc 22 &resetc 25>;
+		resets = <&sysc 22 &sysc 25>;
 		reset-names = "host", "device";
 	};
 
@@ -290,9 +297,41 @@
 		compatible = "mediatek,mt7628-wmac";
 		reg = <0x10300000 0x100000>;
 
+		clocks = <&sysc 14>;
+		clock-names = "wmac";
+
 		interrupt-parent = <&cpuintc>;
 		interrupts = <6>;
 
 		status = "disabled";
+	};
+
+	ethernet: ethernet@10100000 {
+		compatible = "ralink,rt5350-eth";
+		reg = <0x10100000 0x10000>;
+
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		interrupt-parent = <&cpuintc>;
+		interrupts = <5>;
+
+		resets = <&sysc 21>, <&sysc 23>;
+		reset-names = "fe", "esw";
+
+		status = "disabled";
+
+		mediatek,switch = <&esw>;
+	};
+
+	esw: esw@10110000 {
+		compatible = "ralink,rt3050-esw";
+		reg = <0x10110000 0x8000>;
+
+		resets = <&sysc 24>;
+		reset-names = "ephy";
+
+		interrupt-parent = <&intc>;
+		interrupts = <17>;
 	};
 };
