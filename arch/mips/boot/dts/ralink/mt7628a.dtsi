@@ -179,7 +179,7 @@
 			compatible = "ralink,mt7621-spi";
 			reg = <0xb00 0x100>;
 
-			clocks = <&sysc 9>;
+			clocks = <&sysc 11>;
 			clock-names = "spi";
 
 			pinctrl-names = "default";
@@ -198,7 +198,7 @@
 			compatible = "mediatek,mt7621-i2c";
 			reg = <0x900 0x100>;
 
-			clocks = <&sysc 7>;
+			clocks = <&sysc 9>;
 			clock-names = "i2c";
 
 			pinctrl-names = "default";
@@ -217,7 +217,7 @@
 			compatible = "ns16550a";
 			reg = <0xc00 0x100>;
 
-			clocks = <&sysc 11>;
+			clocks = <&sysc 13>;
 			clock-names = "uart0";
 
 			pinctrl-names = "default";
@@ -236,7 +236,7 @@
 			compatible = "ns16550a";
 			reg = <0xd00 0x100>;
 
-			clocks = <&sysc 12>;
+			clocks = <&sysc 14>;
 			clock-names = "uart1";
 
 			pinctrl-names = "default";
@@ -255,7 +255,7 @@
 			compatible = "ns16550a";
 			reg = <0xe00 0x100>;
 
-			clocks = <&sysc 13>;
+			clocks = <&sysc 15>;
 			clock-names = "uart2";
 
 			pinctrl-names = "default";
@@ -297,7 +297,7 @@
 		compatible = "mediatek,mt7628-wmac";
 		reg = <0x10300000 0x100000>;
 
-		clocks = <&sysc 14>;
+		clocks = <&sysc 17>;
 		clock-names = "wmac";
 
 		interrupt-parent = <&cpuintc>;
