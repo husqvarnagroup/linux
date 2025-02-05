@@ -7559,6 +7559,12 @@ static int rtl8xxxu_sta_add(struct ieee80211_hw *hw,
 	mutex_lock(&priv->sta_mutex);
 	ewma_rssi_init(&sta_info->avg_rssi);
 	if (vif->type == NL80211_IFTYPE_AP) {
+		struct rtl8xxxu_ra_report *rarpt = &priv->ra_report;
+		u32 ramask;
+		int sgi = 0;
+		u8 highest_rate;
+		u8 bw;
+
 		sta_info->rssi_level = RTL8XXXU_RATR_STA_INIT;
 		sta_info->macid = rtl8xxxu_acquire_macid(priv);
 		if (sta_info->macid >= RTL8XXXU_MAX_MAC_ID_NUM) {
@@ -7567,6 +7573,10 @@ static int rtl8xxxu_sta_add(struct ieee80211_hw *hw,
 		}
 
 		rtl8xxxu_refresh_rate_mask(priv, 0, sta, true);
+
+		rtl8xxxu_calc_rate_params(sta, &ramask, &sgi, &highest_rate, &bw);
+		rtl8xxxu_update_ra_report(rarpt, highest_rate, sgi, bw);
+
 		priv->fops->report_connect(priv, sta_info->macid, H2C_MACID_ROLE_STA, true);
 	} else {
 		switch (rtlvif->port_num) {
