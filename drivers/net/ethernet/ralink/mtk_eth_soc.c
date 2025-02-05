@@ -244,10 +244,10 @@ static void fe_clean_rx(struct fe_priv *priv)
 		ring->rx_dma = NULL;
 	}
 
-	if (!ring->frag_cache.va)
+	if (!ring->frag_cache.encoded_page)
 	    return;
 
-	page = virt_to_page(ring->frag_cache.va);
+	page = virt_to_page(ring->frag_cache.encoded_page);
 	__page_frag_cache_drain(page, ring->frag_cache.pagecnt_bias);
 	memset(&ring->frag_cache, 0, sizeof(ring->frag_cache));
 }
@@ -1676,7 +1676,7 @@ err_out:
 	return err;
 }
 
-static int fe_remove(struct platform_device *pdev)
+static void fe_remove(struct platform_device *pdev)
 {
 	struct net_device *dev = platform_get_drvdata(pdev);
 	struct fe_priv *priv = netdev_priv(dev);
@@ -1689,8 +1689,6 @@ static int fe_remove(struct platform_device *pdev)
 	unregister_netdev(dev);
 	free_netdev(dev);
 	platform_set_drvdata(pdev, NULL);
-
-	return 0;
 }
 
 static struct platform_driver fe_driver = {
