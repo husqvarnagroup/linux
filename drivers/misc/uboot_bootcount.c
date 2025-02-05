@@ -19,6 +19,7 @@
 #include <linux/of.h>
 #include <linux/of_address.h>
 #include <linux/of_platform.h>
+#include <linux/platform_device.h>
 
 #define UBOOT_BOOTCOUNT_NAME "bootcount"
 
@@ -144,12 +145,10 @@ no_magic:
 	return -ENODEV;
 }
 
-static int bootcount_remove(struct platform_device *ofdev)
+static void bootcount_remove(struct platform_device *ofdev)
 {
 	misc_deregister(&bootcount_miscdev);
 	iounmap(mem);
-
-	return 0;
 }
 
 static const struct of_device_id bootcount_match[] = {
