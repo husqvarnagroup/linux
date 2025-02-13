@@ -165,7 +165,7 @@ static void fe_get_strings(struct net_device *dev, u32 stringset, u8 *data)
 {
 	switch (stringset) {
 	case ETH_SS_STATS:
-		ethtool_puts(&data, *fe_gdma_str);
+		memcpy(data, *fe_gdma_str, sizeof(fe_gdma_str));
 		break;
 	}
 }
