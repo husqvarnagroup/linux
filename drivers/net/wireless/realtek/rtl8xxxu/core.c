@@ -4880,6 +4880,25 @@ void rtl8xxxu_update_ra_report(struct rtl8xxxu_ra_report *rarpt,
 }
 
 static void
+rtl8xxxu_calc_rate_params(const struct ieee80211_sta *sta, u32 *ramask,
+			  int *sgi, u8 *highest_rate, u8 *bw)
+{
+	/* TODO: Set bits 28-31 for rate adaptive id */
+	*ramask = (sta->deflink.supp_rates[0] & 0xfff) |
+		sta->deflink.ht_cap.mcs.rx_mask[0] << 12 |
+		sta->deflink.ht_cap.mcs.rx_mask[1] << 20;
+	if (sta->deflink.ht_cap.cap &
+		(IEEE80211_HT_CAP_SGI_40 | IEEE80211_HT_CAP_SGI_20))
+		*sgi = 1;
+
+	*highest_rate = fls(*ramask) - 1;
+	if (sta->deflink.ht_cap.cap & IEEE80211_HT_CAP_SUP_WIDTH_20_40)
+		*bw = RATE_INFO_BW_40;
+	else
+		*bw = RATE_INFO_BW_20;
+}
+
+static void
 rtl8xxxu_bss_info_changed(struct ieee80211_hw *hw, struct ieee80211_vif *vif,
 			  struct ieee80211_bss_conf *bss_conf, u64 changed)
 {
@@ -4920,19 +4939,8 @@ rtl8xxxu_bss_info_changed(struct ieee80211_hw *hw, struct ieee80211_vif *vif,
 			if (sta->deflink.vht_cap.vht_supported)
 				dev_info(dev, "%s: VHT supported\n", __func__);
 
-			/* TODO: Set bits 28-31 for rate adaptive id */
-			ramask = (sta->deflink.supp_rates[0] & 0xfff) |
-				sta->deflink.ht_cap.mcs.rx_mask[0] << 12 |
-				sta->deflink.ht_cap.mcs.rx_mask[1] << 20;
-			if (sta->deflink.ht_cap.cap &
-			    (IEEE80211_HT_CAP_SGI_40 | IEEE80211_HT_CAP_SGI_20))
-				sgi = 1;
-
-			highest_rate = fls(ramask) - 1;
-			if (sta->deflink.ht_cap.cap & IEEE80211_HT_CAP_SUP_WIDTH_20_40)
-				bw = RATE_INFO_BW_40;
-			else
-				bw = RATE_INFO_BW_20;
+			rtl8xxxu_calc_rate_params(sta, &sgi, &ramask,
+						  &highest_rate, &bw);
 
 			sta_info = (struct rtl8xxxu_sta_info *)sta->drv_priv;
 			sta_info->rssi_level = RTL8XXXU_RATR_STA_INIT;
