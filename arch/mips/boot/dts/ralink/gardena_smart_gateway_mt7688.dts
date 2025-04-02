@@ -20,6 +20,7 @@
 		reg = <0x0 0x8000000>;
 	};
 
+#if 0
 	gpio-keys {
 		compatible = "gpio-keys";
 
@@ -113,6 +114,7 @@
 			linux,default-trigger = "netdev";
 		};
 	};
+#endif
 
 	aliases {
 		serial0 = &uart0;
@@ -127,7 +129,7 @@
 	status = "okay";
 
 	pinctrl-names = "default";
-	pinctrl-0 = <&pinmux_spi_spi>, <&pinmux_spi_cs1_cs>;
+	pinctrl-0 = <&spi_pins>, <&spi_cs1_pins>;
 
 	flash@0 {
 		compatible = "jedec,spi-nor";
@@ -175,7 +177,7 @@
 	status = "okay";
 
 	pinctrl-names = "default";
-	pinctrl-0 = <&pinmux_i2s_gpio>;		/* GPIO0..3 */
+	pinctrl-0 = <&uart1_pins>;		/* GPIO0..3 */
 
 	fifo-size = <8>;
 	tx-threshold = <8>;
@@ -188,8 +190,7 @@
 	status = "okay";
 
 	pinctrl-names = "default";
-	pinctrl-0 = <&pinmux_p2led_an_gpio>,	/* GPIO41 */
-		    <&pinmux_p3led_an_gpio>;	/* GPIO40 */
+	pinctrl-0 = <&uart2_pins>;		/* GPIO40..41 */
 
 	rts-gpios = <&gpio 40 GPIO_ACTIVE_LOW>;
 	cts-gpios = <&gpio 41 GPIO_ACTIVE_LOW>;

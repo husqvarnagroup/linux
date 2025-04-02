@@ -39,96 +39,96 @@
 			#reset-cells = <1>;
 		};
 
-		pinmux: pinmux@60 {
-			compatible = "pinctrl-single";
-			reg = <0x60 0x8>;
-			#address-cells = <1>;
-			#size-cells = <0>;
-			#pinctrl-cells = <2>;
-			pinctrl-single,bit-per-mux;
-			pinctrl-single,register-width = <32>;
-			pinctrl-single,function-mask = <0x1>;
-
-			pinmux_gpio_gpio: gpio-gpio-pins {
-				pinctrl-single,bits = <0x0 0x0 0x3>;
+		pinctrl: pinctrl {
+			compatible = "ralink,rt2880-pinmux";
+			pinctrl-names = "default";
+			pinctrl-0 = <&state_default>;
+	
+			state_default: pinctrl0 {
 			};
-
-			pinmux_spi_cs1_cs: spi-cs1-cs-pins {
-				pinctrl-single,bits = <0x0 0x0 0x30>;
+	
+			spi_pins: spi_pins {
+				spi_pins {
+					groups = "spi";
+					function = "spi";
+				};
 			};
-
-			pinmux_i2s_gpio: i2s-gpio-pins {
-				pinctrl-single,bits = <0x0 0x40 0xc0>;
+	
+			spi_cs1_pins: spi_cs1 {
+				spi_cs1 {
+					groups = "spi cs1";
+					function = "spi cs1";
+				};
 			};
-
-			pinmux_uart0_uart: uart0-uart0-pins {
-				pinctrl-single,bits = <0x0 0x0 0x300>;
+	
+			i2c_pins: i2c_pins {
+				i2c_pins {
+					groups = "i2c";
+					function = "i2c";
+				};
 			};
-
-			pinmux_sdmode_sdxc: sdmode-sdxc-pins {
-				pinctrl-single,bits = <0x0 0x0 0xc00>;
+	
+			i2s_pins: i2s {
+				i2s {
+					groups = "i2s";
+					function = "i2s";
+				};
 			};
-
-			pinmux_sdmode_gpio: sdmode-gpio-pins {
-				pinctrl-single,bits = <0x0 0x400 0xc00>;
+	
+			uart0_pins: uartlite {
+				uartlite {
+					groups = "uart0";
+					function = "uart0";
+				};
 			};
-
-			pinmux_spi_spi: spi-spi-pins {
-				pinctrl-single,bits = <0x0 0x0 0x1000>;
+	
+			uart1_pins: uart1 {
+				uart1 {
+					groups = "uart1";
+					function = "uart1";
+				};
 			};
-
-			pinmux_refclk_gpio: refclk-gpio-pins {
-				pinctrl-single,bits = <0x0 0x40000 0x40000>;
+	
+			uart2_pins: uart2 {
+				uart2 {
+					groups = "uart2";
+					function = "uart2";
+				};
 			};
-
-			pinmux_i2c_i2c: i2c-i2c-pins {
-				pinctrl-single,bits = <0x0 0x0 0x300000>;
+	
+			sdxc_pins: sdxc {
+				sdxc {
+					groups = "sdmode";
+					function = "sdxc";
+				};
 			};
-
-			pinmux_uart1_uart: uart1-uart1-pins {
-				pinctrl-single,bits = <0x0 0x0 0x3000000>;
+	
+			pwm0_pins: pwm0 {
+				pwm0 {
+					groups = "pwm0";
+					function = "pwm0";
+				};
 			};
-
-			pinmux_uart2_uart: uart2-uart-pins {
-				pinctrl-single,bits = <0x0 0x0 0xc000000>;
+	
+			pwm1_pins: pwm1 {
+				pwm1 {
+					groups = "pwm1";
+					function = "pwm1";
+				};
 			};
-
-			pinmux_pwm0_pwm: pwm0-pwm-pins {
-				pinctrl-single,bits = <0x0 0x0 0x30000000>;
+	
+			pcm_i2s_pins: pcm_i2s {
+				pcm_i2s {
+					groups = "i2s";
+					function = "pcm";
+				};
 			};
-
-			pinmux_pwm0_gpio: pwm0-gpio-pins {
-				pinctrl-single,bits = <0x0 0x10000000
-						       0x30000000>;
-			};
-
-			pinmux_pwm1_pwm: pwm1-pwm-pins {
-				pinctrl-single,bits = <0x0 0x0 0xc0000000>;
-			};
-
-			pinmux_pwm1_gpio: pwm1-gpio-pins {
-				pinctrl-single,bits = <0x0 0x40000000
-						       0xc0000000>;
-			};
-
-			pinmux_p0led_an_gpio: p0led-an-gpio-pins {
-				pinctrl-single,bits = <0x4 0x4 0xc>;
-			};
-
-			pinmux_p1led_an_gpio: p1led-an-gpio-pins {
-				pinctrl-single,bits = <0x4 0x10 0x30>;
-			};
-
-			pinmux_p2led_an_gpio: p2led-an-gpio-pins {
-				pinctrl-single,bits = <0x4 0x40 0xc0>;
-			};
-
-			pinmux_p3led_an_gpio: p3led-an-gpio-pins {
-				pinctrl-single,bits = <0x4 0x100 0x300>;
-			};
-
-			pinmux_p4led_an_gpio: p4led-an-gpio-pins {
-				pinctrl-single,bits = <0x4 0x400 0xc00>;
+	
+			refclk_pins: refclk {
+				refclk {
+					groups = "refclk";
+					function = "refclk";
+				};
 			};
 		};
 
@@ -186,7 +186,7 @@
 			reg = <0xb00 0x100>;
 
 			pinctrl-names = "default";
-			pinctrl-0 = <&pinmux_spi_spi>;
+			pinctrl-0 = <&spi_pins>;
 
 			clocks = <&sysc MT76X8_CLK_SPI1>;
 
@@ -204,7 +204,7 @@
 			reg = <0x900 0x100>;
 
 			pinctrl-names = "default";
-			pinctrl-0 = <&pinmux_i2c_i2c>;
+			pinctrl-0 = <&i2c_pins>;
 
 			clocks = <&sysc MT76X8_CLK_I2C>;
 
@@ -222,7 +222,7 @@
 			reg = <0xc00 0x100>;
 
 			pinctrl-names = "default";
-			pinctrl-0 = <&pinmux_uart0_uart>;
+			pinctrl-0 = <&uart0_pins>;
 
 			clocks = <&sysc MT76X8_CLK_UART0>;
 
@@ -240,7 +240,7 @@
 			reg = <0xd00 0x100>;
 
 			pinctrl-names = "default";
-			pinctrl-0 = <&pinmux_uart1_uart>;
+			pinctrl-0 = <&uart1_pins>;
 
 			clocks = <&sysc MT76X8_CLK_UART1>;
 
@@ -258,7 +258,7 @@
 			reg = <0xe00 0x100>;
 
 			pinctrl-names = "default";
-			pinctrl-0 = <&pinmux_uart2_uart>;
+			pinctrl-0 = <&uart2_pins>;
 
 			clocks = <&sysc MT76X8_CLK_UART2>;
 
