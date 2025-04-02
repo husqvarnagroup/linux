@@ -97,7 +97,7 @@
 				reg = <0x30000 0x10000>;
 			};
 
-			partition@40000 {
+			factory: partition@40000 {
 				label = "factory";
 				reg = <0x40000 0x10000>;
 
@@ -132,4 +132,17 @@
 		reg = <1>;
 		spi-max-frequency = <40000000>;
 	};
+};
+
+&ethernet {
+	status = "okay";
+};
+
+&esw {
+	status = "okay";
+};
+
+&wmac {
+	status = "okay";
+	mediatek,mtd-eeprom = <&factory 0x0000>;
 };
