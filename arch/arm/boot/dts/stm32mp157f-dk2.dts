@@ -39,6 +39,12 @@
 		compatible = "mmc-pwrseq-simple";
 		reset-gpios = <&gpioh 4 GPIO_ACTIVE_LOW>;
 	};
+
+	wlan_en: wlan_en_pwrseq {
+		compatible = "mmc-pwrseq-simple";
+		reset-gpios = <&gpioa 8 GPIO_ACTIVE_LOW>;
+		post-power-on-delay-ms = <70>;
+	};
 };
 
 &cryp1 {
@@ -159,5 +165,39 @@
 		max-speed = <3000000>;
 		vbat-supply = <&v3v3>;
 		vddio-supply = <&v3v3>;
+	};
+};
+
+&sdmmc3 {
+	pinctrl-names = "default", "opendrain", "sleep";
+	pinctrl-0 = <&sdmmc3_b4_pins_a>;
+	pinctrl-1 = <&sdmmc3_b4_od_pins_a>;
+	pinctrl-2 = <&sdmmc3_b4_sleep_pins_a>;
+	status = "okay";
+
+	// ST's suggestion
+	// no-sd;
+	// no-mmc;
+
+	// THIS WORKS WITH 1BIT BUS WIDTH
+	arm,primecell-periphid = <0x00253180>;
+	non-removable;
+	st,neg-edge;
+	vmmc-supply = <&v3v3>;
+	mmc-pwrseq = <&wlan_en>;
+	bus-width = <4>;
+	#address-cells = <1>;
+	#size-cells = <0>;
+	cap-power-off-card;
+	max-frequency = <5000000>;
+
+	wlcore: wlcore@0 {
+		compatible = "ti,cc33xx";
+		reg = <2>;
+		interrupt-parent = <&gpiog>;
+		interrupts = <2 IRQ_TYPE_LEVEL_HIGH>;
+		irq-gpio = <&gpiog 2 GPIO_ACTIVE_HIGH>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&wl_irq_pins>;
 	};
 };
