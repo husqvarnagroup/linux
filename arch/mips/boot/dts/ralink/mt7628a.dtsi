@@ -311,8 +311,8 @@
 		interrupt-parent = <&cpuintc>;
 		interrupts = <5>;
 
-		resets = <&resetc 21>;
-		reset-names = "fe";
+		resets = <&sysc 21>, <&sysc 23>;
+		reset-names = "fe", "esw";
 
 		status = "disabled";
 	};
@@ -321,8 +321,8 @@
 		compatible = "ralink,rt3050-esw";
 		reg = <0x10110000 0x8000>;
 
-		resets = <&resetc 23>;
-		reset-names = "esw";
+		resets = <&sysc 24>;
+		reset-names = "ephy";
 
 		interrupt-parent = <&intc>;
 		interrupts = <17>;
