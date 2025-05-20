@@ -85,4 +85,9 @@
 		pinctrl-names = "default";
 		pinctrl-0 = <&main_wlirq_pins_default>;
 	};
+
+	btti: btti@1 {
+		compatible = "ti,cc33xxbt";
+		reg = <1>;
+	};
 };
