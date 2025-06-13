@@ -244,10 +244,10 @@ static void fe_clean_rx(struct fe_priv *priv)
 		ring->rx_dma = NULL;
 	}
 
-	if (!ring->frag_cache.va)
+	if (!ring->frag_cache.encoded_page)
 	    return;
 
-	page = virt_to_page(ring->frag_cache.va);
+	page = virt_to_page(ring->frag_cache.encoded_page);
 	__page_frag_cache_drain(page, ring->frag_cache.pagecnt_bias);
 	memset(&ring->frag_cache, 0, sizeof(ring->frag_cache));
 }
@@ -1655,7 +1655,7 @@ static void fe_remove(struct platform_device *pdev)
 
 static struct platform_driver fe_driver = {
 	.probe = fe_probe,
-	.remove_new = fe_remove,
+	.remove = fe_remove,
 	.driver = {
 		.name = "mtk_soc_eth",
 		.of_match_table = of_fe_match,
