@@ -48,11 +48,9 @@ static const char *clk_cpu(int *idx)
 		*idx = 2;
 		return "ralink,mt7620-sysc";
 	case MT762X_SOC_MT7628AN:
-		*idx = 1;
-		return "ralink,mt7628-sysc";
 	case MT762X_SOC_MT7688:
 		*idx = 1;
-		return "ralink,mt7688-sysc";
+		return "ralink,mt7628-sysc";
 	default:
 		*idx = -1;
 		return "invalid";
