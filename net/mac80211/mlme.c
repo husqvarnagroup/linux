@@ -3374,8 +3374,12 @@ static void ieee80211_beacon_connection_loss_work(struct work_struct *work)
 		__ieee80211_disconnect(sdata);
 		ifmgd->driver_disconnect = false;
 	} else {
-		if (ifmgd->associated)
+		if (ifmgd->associated) {
 			sdata->deflink.u.mgd.beacon_loss_count++;
+			sdata_info(sdata,
+			   "DBG: beacon_loss_count: %d\n",
+			   sdata->deflink.u.mgd.beacon_loss_count);
+		}
 		ieee80211_mgd_probe_ap(sdata, true);
 	}
 }
