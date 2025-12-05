@@ -7523,8 +7523,7 @@ static int rtl8xxxu_sta_add(struct ieee80211_hw *hw,
 			sgi = 1;
 
 		highest_rate = fls(ramask) - 1;
-		if (rtl8xxxu_ht40_2g &&
-			(sta->deflink.ht_cap.cap & IEEE80211_HT_CAP_SUP_WIDTH_20_40))
+		if (sta->deflink.ht_cap.cap & IEEE80211_HT_CAP_SUP_WIDTH_20_40)
 			bw = RATE_INFO_BW_40;
 		else
 			bw = RATE_INFO_BW_20;
