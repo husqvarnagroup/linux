@@ -1718,12 +1718,21 @@ void mt76_wcid_cleanup(struct mt76_dev *dev, struct mt76_wcid *wcid)
 
 	spin_lock_bh(&phy->tx_lock);
 
-	if (!list_empty(&wcid->tx_list))
+	if (!list_empty(&wcid->tx_list)) {
+		dev_err(dev->dev, "DBG: mt76: wcid %d tx_list not empty during cleanup\n",
+			wcid->idx);
+		WARN_ON_ONCE(1);
 		list_del_init(&wcid->tx_list);
+	}
 
 	spin_lock(&wcid->tx_pending.lock);
 	skb_queue_splice_tail_init(&wcid->tx_pending, &list);
 	spin_unlock(&wcid->tx_pending.lock);
+
+	if (!skb_queue_empty(&list)) {
+		dev_err(dev->dev, "DBG: mt76: wcid %d had %d pending tx skbs during cleanup\n",
+			wcid->idx, skb_queue_len(&list));
+	}
 
 	spin_lock(&wcid->tx_offchannel.lock);
 	skb_queue_splice_tail_init(&wcid->tx_offchannel, &list);

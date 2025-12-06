@@ -1603,6 +1603,15 @@ mt7603_watchdog_check(struct mt7603_dev *dev, u8 *counter,
 trigger:
 	dev->cur_reset_cause = cause;
 	dev->reset_cause[cause]++;
+	dev_err(dev->mt76.dev,
+		"DBG: mt7603: watchdog reset triggered, cause=%d (%s), count=%u\n",
+		cause,
+		cause == RESET_CAUSE_TX_HANG ? "TX hang" :
+		cause == RESET_CAUSE_TX_BUSY ? "TX DMA busy" :
+		cause == RESET_CAUSE_RX_BUSY ? "RX DMA busy" :
+		cause == RESET_CAUSE_RX_PSE_BUSY ? "RX PSE busy" :
+		cause == RESET_CAUSE_BEACON_STUCK ? "Beacon stuck" : "unknown",
+		dev->reset_cause[cause]);
 	return true;
 }
 

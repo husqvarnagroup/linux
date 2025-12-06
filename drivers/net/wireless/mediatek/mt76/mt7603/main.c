@@ -350,6 +350,10 @@ mt7603_sta_add(struct mt76_dev *mdev, struct ieee80211_vif *vif,
 	if (vif->type == NL80211_IFTYPE_AP)
 		set_bit(MT_WCID_FLAG_CHECK_PS, &msta->wcid.flags);
 
+	dev_err(dev->mt76.dev,
+		"DBG: mt7603: sta_add idx=%d addr=%pM vif_idx=%d\n",
+		idx, sta->addr, mvif->idx);
+
 	return ret;
 }
 
@@ -358,6 +362,11 @@ mt7603_sta_event(struct mt76_dev *mdev, struct ieee80211_vif *vif,
 		 struct ieee80211_sta *sta, enum mt76_sta_event ev)
 {
 	struct mt7603_dev *dev = container_of(mdev, struct mt7603_dev, mt76);
+
+	dev_err(dev->mt76.dev,
+		"DBG: mt7603: sta_event ev=%d (%s) sta=%pM\n",
+		ev, ev == MT76_STA_EVENT_ASSOC ? "assoc" :
+		    ev == MT76_STA_EVENT_DISASSOC ? "disassoc" : "other", sta->addr);
 
 	if (ev == MT76_STA_EVENT_ASSOC) {
 		mutex_lock(&dev->mt76.mutex);
@@ -376,6 +385,12 @@ mt7603_sta_remove(struct mt76_dev *mdev, struct ieee80211_vif *vif,
 	struct mt7603_vif *mvif = (struct mt7603_vif *)vif->drv_priv;
 	struct mt7603_sta *msta = (struct mt7603_sta *)sta->drv_priv;
 	struct mt76_wcid *wcid = (struct mt76_wcid *)sta->drv_priv;
+
+	dev_err(dev->mt76.dev,
+		"DBG: mt7603: sta_remove idx=%d addr=%pM tx_pending=%d poll_list_empty=%d\n",
+		wcid->idx, sta->addr,
+		skb_queue_len(&wcid->tx_pending),
+		list_empty(&wcid->poll_list));
 
 	spin_lock_bh(&dev->ps_lock);
 	__skb_queue_purge(&msta->psq);
