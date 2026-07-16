@@ -4558,6 +4558,22 @@ void rtl8xxxu_update_rate_mask(struct rtl8xxxu_priv *priv,
 	dev_dbg(&priv->udev->dev, "%s: rate mask %08x, arg %02x, size %zi\n",
 		__func__, ramask, h2c.ramask.arg, sizeof(h2c.ramask));
 	rtl8xxxu_gen1_h2c_cmd(priv, &h2c, sizeof(h2c.ramask));
+
+	/*
+	 * The gen1 firmware only performs rate adaptation for macid 0
+	 * (H2C_JOIN_BSS_REPORT has no macid field), so stations connected
+	 * in AP mode would be stuck at the lowest rate. Select the rate
+	 * in the driver for them instead, like the vendor driver does
+	 * with firmware rate control disabled.
+	 */
+	if (macid > RTL8XXXU_BC_MC_MACID1 && ramask) {
+		u8 rate = fls(ramask) - 1;
+
+		priv->inidata_rate[macid] = rate;
+		if (sgi)
+			rate |= BIT(6);
+		rtl8xxxu_write8(priv, REG_INIDATA_RATE_SEL + macid, rate);
+	}
 }
 
 void rtl8xxxu_gen2_update_rate_mask(struct rtl8xxxu_priv *priv,

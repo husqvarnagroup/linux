@@ -1930,6 +1930,8 @@ struct rtl8xxxu_priv {
 	struct led_classdev led_cdev;
 	DECLARE_BITMAP(mac_id_map, RTL8XXXU_MAX_MAC_ID_NUM);
 	DECLARE_BITMAP(cam_map, RTL8XXXU_MAX_SEC_CAM_NUM);
+	/* Driver-selected TX rate per macid, gen1 AP mode only */
+	u8 inidata_rate[RTL8XXXU_MAX_MAC_ID_NUM];
 };
 
 DECLARE_EWMA(rssi, 10, 16);
