@@ -5273,8 +5273,11 @@ rtl8xxxu_fill_txdesc_v1(struct ieee80211_hw *hw, struct ieee80211_hdr *hdr,
 
 	tx_desc->txdw5 = cpu_to_le32(rate);
 
-	if (ieee80211_is_data(hdr->frame_control))
+	if (ieee80211_is_data(hdr->frame_control)) {
 		tx_desc->txdw5 |= cpu_to_le32(0x0001ff00);
+		/* Driver-selected rate for AP mode stations, 0 otherwise */
+		tx_desc->txdw5 |= cpu_to_le32(priv->inidata_rate[macid]);
+	}
 
 	tx_desc->txdw3 = cpu_to_le32((u32)seq_number << TXDESC32_SEQ_SHIFT);
 
