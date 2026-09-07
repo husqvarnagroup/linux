@@ -1276,6 +1276,7 @@ dtb-$(CONFIG_ARCH_UNIPHIER) += \
 	uniphier-pxs2-vodka.dtb \
 	uniphier-sld8-ref.dtb
 dtb-$(CONFIG_ARCH_VERSATILE) += \
+	qemu-gardena-smart-gateway.dtb \
 	versatile-ab.dtb \
 	versatile-ab-ib2.dtb \
 	versatile-pb.dtb
