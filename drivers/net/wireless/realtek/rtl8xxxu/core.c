@@ -4958,17 +4958,9 @@ rtl8xxxu_wireless_mode(struct ieee80211_hw *hw, struct ieee80211_sta *sta)
 	return network_type;
 }
 
-static void rtl8xxxu_set_aifs(struct rtl8xxxu_priv *priv, u8 slot_time)
+static u8 rtl8xxxu_get_sifs(struct rtl8xxxu_priv *priv)
 {
-	u32 reg_edca_param[IEEE80211_NUM_ACS] = {
-		[IEEE80211_AC_VO] = REG_EDCA_VO_PARAM,
-		[IEEE80211_AC_VI] = REG_EDCA_VI_PARAM,
-		[IEEE80211_AC_BE] = REG_EDCA_BE_PARAM,
-		[IEEE80211_AC_BK] = REG_EDCA_BK_PARAM,
-	};
-	u32 val32;
 	u16 wireless_mode = 0;
-	u8 aifs, aifsn, sifs;
 	int i;
 
 	for (i = 0; i < ARRAY_SIZE(priv->vifs); i++) {
@@ -4989,24 +4981,38 @@ static void rtl8xxxu_set_aifs(struct rtl8xxxu_priv *priv, u8 slot_time)
 
 	if (priv->hw->conf.chandef.chan->band == NL80211_BAND_5GHZ ||
 	    (wireless_mode & WIRELESS_MODE_N_24G))
-		sifs = 16;
-	else
-		sifs = 10;
+		return 16;
+
+	return 10;
+}
+
+static u8 rtl8xxxu_calc_aifs(u8 aifsn, u8 slot_time, u8 sifs)
+{
+	return min(aifsn * slot_time + sifs, 0xff);
+}
+
+static void rtl8xxxu_set_aifs(struct rtl8xxxu_priv *priv, u8 slot_time)
+{
+	u32 reg_edca_param[IEEE80211_NUM_ACS] = {
+		[IEEE80211_AC_VO] = REG_EDCA_VO_PARAM,
+		[IEEE80211_AC_VI] = REG_EDCA_VI_PARAM,
+		[IEEE80211_AC_BE] = REG_EDCA_BE_PARAM,
+		[IEEE80211_AC_BK] = REG_EDCA_BK_PARAM,
+	};
+	u32 val32;
+	u8 sifs;
+	int i;
+
+	sifs = rtl8xxxu_get_sifs(priv);
 
 	for (i = 0; i < IEEE80211_NUM_ACS; i++) {
-		val32 = rtl8xxxu_read32(priv, reg_edca_param[i]);
-
-		/* It was set in conf_tx. */
-		aifsn = val32 & 0xff;
-
-		/* aifsn not set yet or already fixed */
-		if (aifsn < 2 || aifsn > 15)
+		/* Not set by conf_tx yet */
+		if (!priv->aifsn[i])
 			continue;
 
-		aifs = aifsn * slot_time + sifs;
-
+		val32 = rtl8xxxu_read32(priv, reg_edca_param[i]);
 		val32 &= ~0xff;
-		val32 |= aifs;
+		val32 |= rtl8xxxu_calc_aifs(priv->aifsn[i], slot_time, sifs);
 		rtl8xxxu_write32(priv, reg_edca_param[i], val32);
 	}
 }
@@ -7068,9 +7074,18 @@ static int rtl8xxxu_conf_tx(struct ieee80211_hw *hw,
 	struct rtl8xxxu_priv *priv = hw->priv;
 	struct device *dev = &priv->udev->dev;
 	u32 val32;
-	u8 aifs, acm_ctrl, acm_bit;
+	u8 aifs, acm_ctrl, acm_bit, slot_time;
 
-	aifs = param->aifs;
+	/*
+	 * The registers take the AIFS in us. Keep the AIFSN so that
+	 * rtl8xxxu_set_aifs() can recalculate it when the slot time changes.
+	 */
+	if (queue < IEEE80211_NUM_ACS)
+		priv->aifsn[queue] = param->aifs;
+
+	slot_time = rtl8xxxu_read8(priv, REG_SLOT);
+	aifs = rtl8xxxu_calc_aifs(param->aifs, slot_time,
+				  rtl8xxxu_get_sifs(priv));
 
 	val32 = aifs |
 		fls(param->cw_min) << EDCA_PARAM_ECW_MIN_SHIFT |
