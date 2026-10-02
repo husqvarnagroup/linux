@@ -4707,6 +4707,19 @@ void rtl8xxxu_update_rate_mask(struct rtl8xxxu_priv *priv,
 
 	memset(&h2c, 0, sizeof(struct h2c_cmd));
 
+	/*
+	 * Rate adaptive ID in bits 28-31, as rtlwifi does. The same ID goes
+	 * into the TX descriptor.
+	 */
+	if (ramask & 0x000ff000)
+		rateid = RATR_INX_WIRELESS_NGB;
+	else if (ramask & 0x00000ff0)
+		rateid = RATR_INX_WIRELESS_GB;
+	else
+		rateid = RATR_INX_WIRELESS_B;
+	priv->rate_id[macid] = rateid;
+	ramask = (ramask & 0x0fffffff) | rateid << 28;
+
 	h2c.ramask.cmd = H2C_SET_RATE_MASK;
 	h2c.ramask.mask_lo = cpu_to_le16(ramask & 0xffff);
 	h2c.ramask.mask_hi = cpu_to_le16(ramask >> 16);
@@ -5117,7 +5130,6 @@ static void
 rtl8xxxu_calc_rate_params(const struct ieee80211_sta *sta, u32 *ramask,
 			  int *sgi, u8 *highest_rate, u8 *bw)
 {
-	/* TODO: Set bits 28-31 for rate adaptive id */
 	*ramask = (sta->deflink.supp_rates[0] & 0xfff) |
 		sta->deflink.ht_cap.mcs.rx_mask[0] << 12 |
 		sta->deflink.ht_cap.mcs.rx_mask[1] << 20;
@@ -5487,8 +5499,11 @@ rtl8xxxu_fill_txdesc_v1(struct ieee80211_hw *hw, struct ieee80211_hdr *hdr,
 
 	tx_desc->txdw5 = cpu_to_le32(rate);
 
-	if (ieee80211_is_data(hdr->frame_control))
+	if (ieee80211_is_data(hdr->frame_control)) {
 		tx_desc->txdw5 |= cpu_to_le32(0x0001ff00);
+		tx_desc->txdw1 |= cpu_to_le32(priv->rate_id[macid] <<
+					      DESC_RATE_ID_SHIFT);
+	}
 
 	tx_desc->txdw3 = cpu_to_le32((u32)seq_number << TXDESC32_SEQ_SHIFT);
 
