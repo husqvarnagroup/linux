@@ -5110,15 +5110,15 @@ static void rtl8xxxu_update_tx_power(struct rtl8xxxu_priv *priv, int dbm)
 
 	group = rtl8xxxu_gen1_channel_to_group(channel);
 
-	if (cck_txpwridx <= priv->cck_tx_power_index_A_backup[group]) {
-		priv->cck_tx_power_index_A[group] = cck_txpwridx;
-		priv->cck_tx_power_index_B[group] = cck_txpwridx;
-	}
+	priv->cck_tx_power_index_A[group] =
+		min(cck_txpwridx, priv->cck_tx_power_index_A_backup[group]);
+	priv->cck_tx_power_index_B[group] =
+		min(cck_txpwridx, priv->cck_tx_power_index_B_backup[group]);
 
-	if (ofdm_txpwridx <= priv->ht40_1s_tx_power_index_A_backup[group]) {
-		priv->ht40_1s_tx_power_index_A[group] = ofdm_txpwridx;
-		priv->ht40_1s_tx_power_index_B[group] = ofdm_txpwridx;
-	}
+	priv->ht40_1s_tx_power_index_A[group] =
+		min(ofdm_txpwridx, priv->ht40_1s_tx_power_index_A_backup[group]);
+	priv->ht40_1s_tx_power_index_B[group] =
+		min(ofdm_txpwridx, priv->ht40_1s_tx_power_index_B_backup[group]);
 
 	priv->cur_cck_txpwridx = priv->cck_tx_power_index_A[group];
 	priv->cur_ofdm24g_txpwridx = priv->ht40_1s_tx_power_index_A[group];
