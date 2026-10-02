@@ -1931,6 +1931,8 @@ struct rtl8xxxu_priv {
 	struct led_classdev led_cdev;
 	DECLARE_BITMAP(mac_id_map, RTL8XXXU_MAX_MAC_ID_NUM);
 	DECLARE_BITMAP(cam_map, RTL8XXXU_MAX_SEC_CAM_NUM);
+	/* AIFSN from conf_tx, REG_EDCA_*_PARAM hold the AIFS in us */
+	u8 aifsn[IEEE80211_NUM_ACS];
 };
 
 DECLARE_EWMA(rssi, 10, 16);
