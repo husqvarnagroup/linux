@@ -1673,6 +1673,13 @@ enum wireless_mode {
 	WIRELESS_MODE_MAX = 0x7F,
 };
 
+/* Gen1 rate adaptive IDs, from rtlwifi/wifi.h */
+enum ratr_index {
+	RATR_INX_WIRELESS_NGB = 0,
+	RATR_INX_WIRELESS_GB = 4,
+	RATR_INX_WIRELESS_B = 6,
+};
+
 /* from rtlwifi/wifi.h */
 enum ratr_table_mode_new {
 	RATEID_IDX_BGN_40M_2SS = 0,
@@ -1924,6 +1931,8 @@ struct rtl8xxxu_priv {
 	struct led_classdev led_cdev;
 	DECLARE_BITMAP(mac_id_map, RTL8XXXU_MAX_MAC_ID_NUM);
 	DECLARE_BITMAP(cam_map, RTL8XXXU_MAX_SEC_CAM_NUM);
+	/* Rate adaptive ID per macid, gen1 only */
+	u8 rate_id[RTL8XXXU_MAX_MAC_ID_NUM];
 	/* AIFSN from conf_tx, REG_EDCA_*_PARAM hold the AIFS in us */
 	u8 aifsn[IEEE80211_NUM_ACS];
 };
