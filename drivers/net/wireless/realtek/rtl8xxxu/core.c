@@ -1465,7 +1465,7 @@ rtl8xxxu_gen1_set_tx_power(struct rtl8xxxu_priv *priv, int channel, bool ht40)
 	u8 cck[RTL8723A_MAX_RF_PATHS], ofdm[RTL8723A_MAX_RF_PATHS];
 	u8 ofdmbase[RTL8723A_MAX_RF_PATHS], mcsbase[RTL8723A_MAX_RF_PATHS];
 	u32 val32, ofdm_a, ofdm_b, mcs_a, mcs_b;
-	u8 val8, base;
+	u8 val8, base, cck_max, ofdm_max;
 	int group, i;
 
 	group = rtl8xxxu_gen1_channel_to_group(channel);
@@ -1491,6 +1491,20 @@ rtl8xxxu_gen1_set_tx_power(struct rtl8xxxu_priv *priv, int channel, bool ht40)
 	if (!ht40) {
 		mcsbase[0] += priv->ht20_tx_power_index_diff[group].a;
 		mcsbase[1] += priv->ht20_tx_power_index_diff[group].b;
+	}
+
+	/* Same conversion as _rtl92c_phy_dbm_to_txpwr_idx() in rtlwifi */
+	if (priv->tx_power_limit != INT_MAX) {
+		cck_max = clamp(2 * (priv->tx_power_limit + 7), 0,
+				RF6052_MAX_TX_PWR);
+		ofdm_max = clamp(2 * (priv->tx_power_limit + 8), 0,
+				 RF6052_MAX_TX_PWR);
+
+		for (i = 0; i < RTL8723A_MAX_RF_PATHS; i++) {
+			cck[i] = min(cck[i], cck_max);
+			ofdmbase[i] = min(ofdmbase[i], ofdm_max);
+			mcsbase[i] = min(mcsbase[i], ofdm_max);
+		}
 	}
 
 	if (priv->tx_paths > 1) {
@@ -4996,6 +5010,24 @@ rtl8xxxu_calc_rate_params(const struct ieee80211_sta *sta, u32 *ramask,
 		*bw = RATE_INFO_BW_20;
 }
 
+static void rtl8xxxu_update_tx_power_limit(struct rtl8xxxu_priv *priv)
+{
+	struct cfg80211_chan_def *chandef = &priv->hw->conf.chandef;
+	int i, limit = INT_MAX;
+
+	for (i = 0; i < ARRAY_SIZE(priv->vifs); i++) {
+		if (priv->vifs[i] && priv->vifs[i]->bss_conf.txpower != INT_MIN)
+			limit = min(limit, priv->vifs[i]->bss_conf.txpower);
+	}
+
+	if (limit == priv->tx_power_limit)
+		return;
+
+	priv->tx_power_limit = limit;
+	priv->fops->set_tx_power(priv, chandef->chan->hw_value,
+				 chandef->width == NL80211_CHAN_WIDTH_40);
+}
+
 static void
 rtl8xxxu_bss_info_changed(struct ieee80211_hw *hw, struct ieee80211_vif *vif,
 			  struct ieee80211_bss_conf *bss_conf, u64 changed)
@@ -5010,6 +5042,9 @@ rtl8xxxu_bss_info_changed(struct ieee80211_hw *hw, struct ieee80211_vif *vif,
 	u32 val32;
 
 	rarpt = &priv->ra_report;
+
+	if (changed & BSS_CHANGED_TXPOWER)
+		rtl8xxxu_update_tx_power_limit(priv);
 
 	if (changed & BSS_CHANGED_ASSOC) {
 		dev_dbg(dev, "Changed ASSOC: %i!\n", vif->cfg.assoc);
@@ -6885,6 +6920,7 @@ static void rtl8xxxu_remove_interface(struct ieee80211_hw *hw,
 	dev_dbg(&priv->udev->dev, "%s\n", __func__);
 
 	priv->vifs[rtlvif->port_num] = NULL;
+	rtl8xxxu_update_tx_power_limit(priv);
 }
 
 static int rtl8xxxu_config(struct ieee80211_hw *hw, int radio_idx, u32 changed)
@@ -7911,6 +7947,7 @@ static int rtl8xxxu_probe(struct usb_interface *interface,
 	priv = hw->priv;
 	priv->hw = hw;
 	priv->udev = udev;
+	priv->tx_power_limit = INT_MAX;
 	priv->fops = (struct rtl8xxxu_fileops *)id->driver_info;
 	mutex_init(&priv->usb_buf_mutex);
 	mutex_init(&priv->syson_indirect_access_mutex);

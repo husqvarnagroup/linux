@@ -1917,6 +1917,7 @@ struct rtl8xxxu_priv {
 	DECLARE_BITMAP(tid_tx_operational, IEEE80211_NUM_TIDS);
 
 	struct ieee80211_vif *vifs[2];
+	int tx_power_limit;	/* dBm, INT_MAX if unset */
 	struct delayed_work ra_watchdog;
 	struct work_struct c2hcmd_work;
 	struct sk_buff_head c2hcmd_queue;
