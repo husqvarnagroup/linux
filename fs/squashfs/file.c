@@ -570,6 +570,89 @@ out:
 	return 1;
 }
 
+/*
+ * Read a datablock if the readahead batch does not cover the whole block,
+ * e.g. because some of its pages are still in the page cache. Like
+ * squashfs_readpage_block(), this also fills the other missing pages of the
+ * block. Otherwise, each hole in the block reads and decompresses the whole
+ * block again.
+ */
+static void squashfs_readahead_partial(struct inode *inode, struct page **page,
+	unsigned int pages, u64 block, int bsize, unsigned int expected,
+	loff_t start)
+{
+	struct address_space *mapping = inode->i_mapping;
+	struct squashfs_sb_info *msblk = inode->i_sb->s_fs_info;
+	unsigned int max_pages = (expected + PAGE_SIZE - 1) >> PAGE_SHIFT;
+	pgoff_t index = start >> PAGE_SHIFT;
+	struct squashfs_page_actor *actor;
+	struct page **all, *last_page;
+	unsigned int i, n = 0, nr = 0;
+	int res, bytes;
+
+	all = kmalloc_array(max_pages, sizeof(void *), GFP_KERNEL);
+	if (!all)
+		goto out;
+
+	for (i = 0; i < max_pages; i++, index++) {
+		struct folio *folio;
+
+		if (n < pages && page_folio(page[n])->index == index) {
+			all[nr++] = page[n++];
+			continue;
+		}
+
+		folio = __filemap_get_folio(mapping, index,
+				FGP_LOCK|FGP_CREAT|FGP_NOFS|FGP_NOWAIT,
+				mapping_gfp_mask(mapping));
+		if (IS_ERR(folio))
+			continue;
+
+		if (folio_test_uptodate(folio)) {
+			folio_unlock(folio);
+			folio_put(folio);
+			continue;
+		}
+
+		all[nr++] = folio_page(folio, 0);
+	}
+
+	actor = squashfs_page_actor_init_special(msblk, all, nr, expected,
+						 start);
+	if (!actor)
+		goto release;
+
+	res = squashfs_read_data(inode->i_sb, block, bsize, NULL, actor);
+
+	last_page = squashfs_page_actor_free(actor);
+
+	if (res == expected && !IS_ERR(last_page)) {
+		/* Last page (if present) may have trailing bytes not filled */
+		bytes = res % PAGE_SIZE;
+		if (bytes && last_page)
+			memzero_page(last_page, bytes, PAGE_SIZE - bytes);
+
+		for (i = 0; i < nr; i++) {
+			flush_dcache_page(all[i]);
+			SetPageUptodate(all[i]);
+		}
+	}
+
+release:
+	for (i = 0; i < nr; i++) {
+		unlock_page(all[i]);
+		put_page(all[i]);
+	}
+	kfree(all);
+
+out:
+	/* Release the pages of the batch that are beyond this block */
+	for (i = n; i < pages; i++) {
+		unlock_page(page[i]);
+		put_page(page[i]);
+	}
+}
+
 static void squashfs_readahead(struct readahead_control *ractl)
 {
 	struct inode *inode = ractl->mapping->host;
@@ -622,6 +705,14 @@ static void squashfs_readahead(struct readahead_control *ractl)
 		bsize = read_blocklist(inode, start >> msblk->block_log, &block);
 		if (bsize == 0)
 			goto skip_pages;
+
+		if (bsize > 0 && (nr_pages != max_pages ||
+				page_folio(pages[0])->index != start >> PAGE_SHIFT)) {
+			squashfs_readahead_partial(inode, pages, nr_pages,
+					block, bsize, expected, start);
+			start += readahead_batch_length(ractl);
+			continue;
+		}
 
 		actor = squashfs_page_actor_init_special(msblk, pages, nr_pages,
 							expected, start);
